@@ -25,7 +25,7 @@ local function tintSky(on)
 	if not atmosphere then
 		return
 	end
-	local goal = { Color = Color3.fromRGB(200, 170, 255), Decay = Color3.fromRGB(110, 80, 160) }
+	local goal = { Color = Color3.fromRGB(205, 225, 255), Decay = Color3.fromRGB(110, 130, 170) }
 	if on then
 		goal = { Color = Color3.fromRGB(255, 150, 90), Decay = Color3.fromRGB(200, 60, 60) }
 	end

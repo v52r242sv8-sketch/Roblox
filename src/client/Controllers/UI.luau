@@ -298,148 +298,229 @@ local function setBlur(on)
 	TweenService:Create(blur, TweenInfo.new(0.25), { Size = size }):Play()
 end
 
--- Top bar -------------------------------------------------------------------------
+-- Left HUD: cash, income, speed and the big tile buttons ------------------------
 
-local function buildTopBar()
-	local top = scaled(create("Frame", {
-		Name = "TopBar",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 8),
-		Size = UDim2.fromOffset(380, 130),
+local function hudStat(parent, order, iconText, iconColor, height)
+	local row = create("Frame", {
+		LayoutOrder = order,
+		Size = UDim2.new(1, 0, 0, height),
 		BackgroundTransparency = 1,
-		Parent = gui,
-	}))
-	refs.TopBar = top
-
-	-- Cash pill
-	create("Frame", {
-		Name = "CashShadow",
-		Position = UDim2.fromOffset(0, 5),
-		Size = UDim2.new(1, 0, 0, 74),
-		BackgroundColor3 = BLACK,
-		BackgroundTransparency = 0.55,
-		Parent = top,
-	}, { corner(37) })
-	local cash = create("Frame", {
-		Name = "Cash",
-		Size = UDim2.new(1, 0, 0, 74),
-		BackgroundColor3 = WHITE,
-		Parent = top,
-	}, {
-		corner(37),
-		stroke(Color3.fromRGB(90, 55, 0), 3),
-		gradient(Color3.fromRGB(255, 232, 120), Color3.fromRGB(245, 160, 30)),
+		Parent = parent,
 	})
-	create("Frame", {
-		Name = "Shine",
-		Position = UDim2.new(0, 12, 0, 4),
-		Size = UDim2.new(1, -24, 0, 26),
+	local icon = create("Frame", {
+		Name = "Icon",
+		Position = UDim2.fromOffset(0, (height - (height - 6)) / 2),
+		Size = UDim2.fromOffset(height - 6, height - 6),
 		BackgroundColor3 = WHITE,
-		BackgroundTransparency = 0.7,
-		Parent = cash,
-	}, { corner(13) })
-	local coin = create("Frame", {
-		Name = "Coin",
-		Position = UDim2.fromOffset(8, 7),
-		Size = UDim2.fromOffset(60, 60),
-		BackgroundColor3 = WHITE,
-		Parent = cash,
-	}, {
-		round(),
-		stroke(Color3.fromRGB(120, 70, 0), 3),
-		gradient(Color3.fromRGB(255, 240, 150), Color3.fromRGB(230, 140, 20)),
-	})
-	label({ Size = UDim2.fromScale(1, 1), Text = "$", Parent = coin }, 3)
-	refs.Coin = coin
-	refs.Money = label({
-		Name = "Money",
-		Position = UDim2.new(0, 76, 0, 4),
-		Size = UDim2.new(1, -92, 0, 42),
-		Text = "$0",
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = cash,
-	}, 3)
-	refs.Income = label({
-		Name = "Income",
-		Position = UDim2.new(0, 78, 0, 44),
-		Size = UDim2.new(1, -92, 0, 24),
-		Text = "+$0/s",
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Color3.fromRGB(255, 255, 220),
-		Parent = cash,
-	}, 2)
-
-	-- Speed bar
-	local speed = create("Frame", {
-		Name = "Speed",
-		Position = UDim2.new(0, 24, 0, 86),
-		Size = UDim2.new(1, -48, 0, 36),
-		BackgroundColor3 = Color3.fromRGB(20, 18, 40),
-		BackgroundTransparency = 0.1,
-		ClipsDescendants = true,
-		Parent = top,
+		Parent = row,
 	}, {
 		round(),
 		stroke(BLACK, 3),
+		gradient(iconColor:Lerp(WHITE, 0.35), iconColor:Lerp(BLACK, 0.15)),
 	})
+	label({ Size = UDim2.fromScale(1, 1), Text = iconText, Parent = icon }, 2)
+	local text = label({
+		Position = UDim2.fromOffset(height + 2, 0),
+		Size = UDim2.new(1, -(height + 2), 1, 0),
+		Text = "",
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = row,
+	}, 3)
+	return row, icon, text
+end
+
+local function buildTopBar()
+	local hud = scaled(create("Frame", {
+		Name = "LeftHud",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 14, 0.5, 10),
+		Size = UDim2.fromOffset(250, 560),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	}, {
+		create("UIListLayout", {
+			Padding = UDim.new(0, 6),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+		}),
+	}))
+	refs.TopBar = hud
+	refs.Hud = hud
+
+	local _, coin, money = hudStat(hud, 1, "$", GOLD, 58)
+	money.TextColor3 = Color3.fromRGB(120, 255, 90)
+	money.Text = "$0"
+	refs.Coin = coin
+	refs.Money = money
+
+	refs.Income = label({
+		LayoutOrder = 2,
+		Size = UDim2.new(1, 0, 0, 24),
+		Text = "+$0/s",
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(255, 235, 120),
+		Parent = hud,
+	}, 2)
+
+	local _, _, speed = hudStat(hud, 3, "⚡", Color3.fromRGB(70, 200, 255), 44)
+	speed.TextColor3 = Color3.fromRGB(130, 225, 255)
+	speed.Text = "16"
+	refs.Speed = speed
+
+	-- Speed progress bar
+	local bar = create("Frame", {
+		LayoutOrder = 4,
+		Size = UDim2.new(1, -20, 0, 16),
+		BackgroundColor3 = Color3.fromRGB(25, 25, 40),
+		ClipsDescendants = true,
+		Parent = hud,
+	}, { round(), stroke(BLACK, 3) })
 	local fill = create("Frame", {
 		Name = "Fill",
 		Size = UDim2.fromScale(0.05, 1),
 		BackgroundColor3 = WHITE,
-		Parent = speed,
+		Parent = bar,
 	}, {
 		round(),
-		gradient(Color3.fromRGB(70, 220, 255), Color3.fromRGB(170, 90, 255), 0),
+		gradient(Color3.fromRGB(70, 230, 255), Color3.fromRGB(150, 90, 255), 0),
 	})
-	-- Moving shine across the fill
 	local shimmer = create("UIGradient", {
 		Color = ColorSequence.new(WHITE),
 		Transparency = NumberSequence.new({
 			NumberSequenceKeypoint.new(0, 1),
 			NumberSequenceKeypoint.new(0.42, 1),
-			NumberSequenceKeypoint.new(0.5, 0.45),
+			NumberSequenceKeypoint.new(0.5, 0.4),
 			NumberSequenceKeypoint.new(0.58, 1),
 			NumberSequenceKeypoint.new(1, 1),
 		}),
 		Offset = Vector2.new(-1, 0),
 	})
-	create("Frame", {
-		Name = "Shimmer",
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = WHITE,
-		Parent = fill,
-	}, { round(), shimmer })
+	create("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE, Parent = fill }, { round(), shimmer })
 	TweenService:Create(shimmer, TweenInfo.new(1.6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {
 		Offset = Vector2.new(1, 0),
 	}):Play()
 	refs.SpeedFill = fill
-	refs.Speed = label({
-		Name = "SpeedText",
-		Position = UDim2.new(0, 10, 0, 4),
-		Size = UDim2.new(1, -20, 1, -8),
-		Text = "⚡ 16 Speed",
-		ZIndex = 3,
-		Parent = speed,
+	refs.SpeedSub = label({
+		LayoutOrder = 5,
+		Size = UDim2.new(1, 0, 0, 20),
+		Text = "+1/s on your Speed Pad",
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(200, 235, 255),
+		Parent = hud,
 	}, 2)
+
+	create("Frame", { LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 8), BackgroundTransparency = 1, Parent = hud })
 end
 
--- Left menu -------------------------------------------------------------------
+-- Big square tile button: thick outline, bright gradient, big icon, label overlapping the bottom
+local function tileButton(parent, order, name, icon, color, size)
+	local wrapper = create("Frame", {
+		Name = name,
+		LayoutOrder = order,
+		Size = UDim2.fromOffset(size, size),
+		BackgroundTransparency = 1,
+		Parent = parent,
+	})
+	local pop = create("UIScale", { Parent = wrapper })
+	create("Frame", {
+		Name = "Shadow",
+		Position = UDim2.fromOffset(0, 6),
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = BLACK,
+		BackgroundTransparency = 0.45,
+		Parent = wrapper,
+	}, { corner(22) })
+	local btn = create("TextButton", {
+		Name = "Button",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = WHITE,
+		AutoButtonColor = false,
+		Text = "",
+		Parent = wrapper,
+	}, {
+		corner(22),
+		stroke(BLACK, 4),
+		gradient(color:Lerp(WHITE, 0.35), color:Lerp(BLACK, 0.2)),
+	})
+	-- Inner light rim
+	create("Frame", {
+		Position = UDim2.fromOffset(5, 5),
+		Size = UDim2.new(1, -10, 1, -10),
+		BackgroundTransparency = 1,
+		Parent = btn,
+	}, { corner(17), stroke(WHITE, 2, 0.55) })
+	-- Top gloss
+	create("Frame", {
+		Position = UDim2.fromOffset(8, 6),
+		Size = UDim2.new(1, -16, 0.38, 0),
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 0.78,
+		Parent = btn,
+	}, { corner(14) })
+	-- Icon with a drop shadow
+	label({
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 3, 0.43, 4),
+		Size = UDim2.fromScale(0.68, 0.62),
+		Text = icon,
+		TextColor3 = BLACK,
+		TextTransparency = 0.55,
+		Parent = btn,
+	}, false)
+	local iconLabel = label({
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.43),
+		Size = UDim2.fromScale(0.68, 0.62),
+		Text = icon,
+		Rotation = -6,
+		Parent = btn,
+	}, false)
+	-- Name overlapping the bottom edge
+	label({
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 1, -8),
+		Size = UDim2.new(1.15, 0, 0.34, 0),
+		Text = name,
+		Rotation = -4,
+		ZIndex = 3,
+		Parent = wrapper,
+	}, 4)
+
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(pop, TWEEN_FAST, { Scale = 1.08 }):Play()
+		TweenService:Create(iconLabel, TWEEN_POP, { Rotation = 8 }):Play()
+		if hoverSound then
+			hoverSound:Play()
+		end
+	end)
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(pop, TWEEN_FAST, { Scale = 1 }):Play()
+		TweenService:Create(iconLabel, TWEEN_POP, { Rotation = -6 }):Play()
+	end)
+	btn.MouseButton1Down:Connect(function()
+		TweenService:Create(pop, TWEEN_FAST, { Scale = 0.9 }):Play()
+	end)
+	btn.MouseButton1Up:Connect(function()
+		TweenService:Create(pop, TWEEN_POP, { Scale = 1.08 }):Play()
+	end)
+	return wrapper, btn
+end
 
 local function badge(parent)
 	local b = create("Frame", {
 		Name = "Badge",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(1, -6, 0, 6),
-		Size = UDim2.fromOffset(28, 28),
+		Position = UDim2.new(1, -4, 0, 4),
+		Size = UDim2.fromOffset(32, 32),
 		BackgroundColor3 = RED,
 		Visible = false,
 		ZIndex = 5,
 		Parent = parent,
 	}, {
 		round(),
-		stroke(WHITE, 2),
+		stroke(WHITE, 3),
 	})
-	label({ Size = UDim2.fromScale(1, 1), Text = "!", ZIndex = 6, Parent = b }, 1)
+	label({ Size = UDim2.fromScale(1, 1), Text = "!", ZIndex = 6, Parent = b }, 2)
 	local s = create("UIScale", { Parent = b })
 	TweenService:Create(s, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
 		Scale = 1.2,
@@ -448,51 +529,42 @@ local function badge(parent)
 end
 
 local function buildMenu()
-	local menu = scaled(create("Frame", {
-		Name = "Menu",
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 12, 0.5, 0),
-		Size = UDim2.fromOffset(96, 340),
+	local grid = create("Frame", {
+		Name = "Buttons",
+		LayoutOrder = 10,
+		Size = UDim2.fromOffset(240, 230),
 		BackgroundTransparency = 1,
-		Parent = gui,
+		Parent = refs.Hud,
 	}, {
-		create("UIListLayout", {
-			Padding = UDim.new(0, 14),
+		create("UIGridLayout", {
+			CellSize = UDim2.fromOffset(104, 104),
+			CellPadding = UDim2.fromOffset(16, 18),
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			VerticalAlignment = Enum.VerticalAlignment.Center,
 		}),
-	}))
+	})
 
 	local entries = {
-		{ Name = "Shop", Icon = "🛒", Color = Color3.fromRGB(60, 205, 95) },
-		{ Name = "Index", Icon = "📖", Color = Color3.fromRGB(70, 145, 255) },
-		{ Name = "Rebirth", Icon = "🌟", Color = Color3.fromRGB(175, 90, 255) },
+		{ Name = "Shop", Icon = "🛒", Color = Color3.fromRGB(255, 200, 40) },
+		{ Name = "Index", Icon = "📖", Color = Color3.fromRGB(60, 160, 255) },
+		{ Name = "Rebirth", Icon = "🌟", Color = Color3.fromRGB(190, 90, 255) },
+		{ Name = "Boosts", Icon = "🚀", Color = Color3.fromRGB(255, 90, 110) },
 	}
 	refs.Badges = {}
 	for i, entry in entries do
-		local wrapper, btn = fancyButton({
-			Name = entry.Name,
-			LayoutOrder = i,
-			Size = UDim2.fromOffset(92, 92),
-			Text = "",
-			Parent = menu,
-		}, entry.Color)
-		label({
-			Position = UDim2.new(0, 0, 0, -2),
-			Size = UDim2.new(1, 0, 0.66, 0),
-			Text = entry.Icon,
-			Parent = btn,
-		}, false)
-		label({
-			Position = UDim2.new(0, 0, 0.62, 0),
-			Size = UDim2.new(1, 0, 0.36, 0),
-			Text = entry.Name,
-			Parent = btn,
-		}, 2)
+		local wrapper, btn = tileButton(grid, i, entry.Name, entry.Icon, entry.Color, 104)
 		refs.Badges[entry.Name] = badge(wrapper)
 		btn.MouseButton1Click:Connect(function()
 			playClick()
-			UI.TogglePanel(entry.Name)
+			if entry.Name == "Boosts" then
+				UI.TogglePanel("Shop")
+				if refs.ShopScroll and refs.BoostsHeader then
+					task.defer(function()
+						refs.ShopScroll.CanvasPosition = Vector2.new(0, refs.BoostsHeader.AbsolutePosition.Y - refs.ShopScroll.AbsolutePosition.Y + refs.ShopScroll.CanvasPosition.Y)
+					end)
+				end
+			else
+				UI.TogglePanel(entry.Name)
+			end
 		end)
 	end
 end
@@ -510,8 +582,8 @@ local function makePanel(name, title, color)
 		Parent = gui,
 	}, {
 		corner(24),
-		stroke(BLACK, 4),
-		gradient(PANEL_TOP, PANEL_BOTTOM),
+		stroke(BLACK, 5),
+		gradient(color:Lerp(WHITE, 0.05), color:Lerp(BLACK, 0.45)),
 	}))
 	local pop = create("UIScale", { Name = "Pop", Parent = panel })
 
@@ -522,7 +594,7 @@ local function makePanel(name, title, color)
 		Parent = panel,
 	}, {
 		corner(24),
-		gradient(color:Lerp(WHITE, 0.25), color:Lerp(BLACK, 0.1)),
+		gradient(color:Lerp(WHITE, 0.35), color:Lerp(WHITE, 0.1)),
 	})
 	-- Square off the bottom corners of the header
 	create("Frame", {
@@ -531,7 +603,7 @@ local function makePanel(name, title, color)
 		BackgroundColor3 = WHITE,
 		BorderSizePixel = 0,
 		Parent = header,
-	}, { gradient(color:Lerp(WHITE, 0.12), color:Lerp(BLACK, 0.1)) })
+	}, { gradient(color:Lerp(WHITE, 0.2), color:Lerp(WHITE, 0.1)) })
 	label({
 		Position = UDim2.new(0, 22, 0, 10),
 		Size = UDim2.new(1, -110, 1, -20),
@@ -584,14 +656,14 @@ local function scrolling(parent)
 end
 
 local function sectionHeader(parent, order, text)
-	label({
+	return label({
 		LayoutOrder = order,
 		Size = UDim2.new(1, 0, 0, 32),
 		Text = text,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Color3.fromRGB(255, 220, 120),
+		TextColor3 = Color3.fromRGB(255, 240, 150),
 		Parent = parent,
-	}, 2)
+	}, 3)
 end
 
 local function shopRow(parent, order, icon, iconColor, title, description, buttonColor, onClick)
@@ -602,8 +674,8 @@ local function shopRow(parent, order, icon, iconColor, title, description, butto
 		Parent = parent,
 	}, {
 		corner(16),
-		stroke(BLACK, 2, 0.3),
-		gradient(Color3.fromRGB(66, 58, 104), Color3.fromRGB(44, 38, 72)),
+		stroke(BLACK, 3),
+		gradient(Color3.fromRGB(70, 70, 95), Color3.fromRGB(35, 35, 55)),
 	})
 	local iconFrame = create("Frame", {
 		Position = UDim2.fromOffset(10, 11),
@@ -628,9 +700,9 @@ local function shopRow(parent, order, icon, iconColor, title, description, butto
 		Size = UDim2.new(1, -250, 0, 24),
 		Text = description,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Color3.fromRGB(200, 195, 230),
+		TextColor3 = Color3.fromRGB(215, 215, 235),
 		Parent = row,
-	}, false)
+	}, 1)
 	local _, btn = fancyButton({
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -12, 0.5, -2),
@@ -645,6 +717,7 @@ end
 local function buildShop()
 	local content = makePanel("Shop", "🛒 Shop", Color3.fromRGB(60, 205, 95))
 	local scroll = scrolling(content)
+	refs.ShopScroll = scroll
 	create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = scroll })
 
 	local order = 0
@@ -661,7 +734,7 @@ local function buildShop()
 		request("BuyPedestal")
 	end)
 
-	sectionHeader(scroll, nextOrder(), "🚀 Boosts")
+	refs.BoostsHeader = sectionHeader(scroll, nextOrder(), "🚀 Boosts")
 	for _, key in PRODUCT_ORDER do
 		local product = Config.Products[key]
 		local row = shopRow(
@@ -871,7 +944,7 @@ local function buildOverlay()
 	refs.Toasts = scaled(create("Frame", {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 150),
+		Position = UDim2.new(0.5, 0, 0, 16),
 		Size = UDim2.fromOffset(560, 260),
 		BackgroundTransparency = 1,
 		Parent = gui,
@@ -1328,18 +1401,20 @@ end
 
 -- Floating "+$123" near the top bar
 function UI.FloatText(text, color, fromSpeed)
-	local yOffset = 40
+	-- Spawn next to the cash / speed counter on the left HUD (absolute screen position)
+	local anchor = refs.Money
 	if fromSpeed then
-		yOffset = 104
+		anchor = refs.Speed
 	end
+	local origin = anchor.AbsolutePosition + Vector2.new(anchor.AbsoluteSize.X * 0.6, anchor.AbsoluteSize.Y * 0.5)
 	local float = label({
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, math.random(-70, 70), 0, yOffset),
-		Size = UDim2.fromOffset(240, 40),
+		Position = UDim2.fromOffset(origin.X + math.random(-20, 40), origin.Y),
+		Size = UDim2.fromOffset(220, 38),
 		Text = text,
 		TextColor3 = color or WHITE,
 		ZIndex = 20,
-		Parent = refs.TopBar,
+		Parent = refs.Coins,
 	}, 3)
 	local s = create("UIScale", { Scale = 0.4, Parent = float })
 	TweenService:Create(s, TweenInfo.new(0.3, Enum.EasingStyle.Back), { Scale = 1 }):Play()
@@ -1349,7 +1424,7 @@ function UI.FloatText(text, color, fromSpeed)
 		TweenService:Create(outline, info, { Transparency = 1 }):Play()
 	end
 	local tween = TweenService:Create(float, info, {
-		Position = float.Position + UDim2.fromOffset(0, 70),
+		Position = float.Position - UDim2.fromOffset(0, 60),
 		TextTransparency = 1,
 	})
 	tween:Play()
@@ -1424,11 +1499,12 @@ function UI.Update(newState)
 	end
 	refs.Income.Text = incomeText
 
-	local speedText = "⚡ " .. state.Speed .. " Speed   +" .. state.PadRate .. "/s on pad"
+	refs.Speed.Text = state.Speed .. " Speed"
 	if state.Speed >= state.MaxSpeed then
-		speedText = "⚡ " .. state.Speed .. " Speed   MAX!"
+		refs.SpeedSub.Text = "MAX SPEED!"
+	else
+		refs.SpeedSub.Text = "+" .. state.PadRate .. "/s on your Speed Pad"
 	end
-	refs.Speed.Text = speedText
 	TweenService:Create(refs.SpeedFill, TWEEN_FAST, {
 		Size = UDim2.fromScale(math.clamp(state.Speed / state.MaxSpeed, 0.05, 1), 1),
 	}):Play()

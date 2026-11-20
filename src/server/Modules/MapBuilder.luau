@@ -107,17 +107,17 @@ end
 -- Sky, light, terrain --------------------------------------------------------------
 
 local function setupLighting()
-	-- Night sky: meteors and neon glow look best in the dark
-	Lighting.ClockTime = 20.3
-	Lighting.GeographicLatitude = 35
-	Lighting.Brightness = 2.6
-	Lighting.Ambient = Color3.fromRGB(85, 75, 125)
-	Lighting.OutdoorAmbient = Color3.fromRGB(130, 120, 185)
-	Lighting.ExposureCompensation = 0.35
-	Lighting.EnvironmentDiffuseScale = 0.6
-	Lighting.EnvironmentSpecularScale = 0.8
+	-- Bright sunny cartoon look (the style of today's top Roblox games)
+	Lighting.ClockTime = 14.3
+	Lighting.GeographicLatitude = 25
+	Lighting.Brightness = 3
+	Lighting.Ambient = Color3.fromRGB(105, 105, 125)
+	Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 170)
+	Lighting.ExposureCompensation = 0
+	Lighting.EnvironmentDiffuseScale = 1
+	Lighting.EnvironmentSpecularScale = 1
 	Lighting.GlobalShadows = true
-	Lighting.ShadowSoftness = 0.25
+	Lighting.ShadowSoftness = 0.2
 
 	local function effect(className)
 		local existing = Lighting:FindFirstChildOfClass(className)
@@ -129,45 +129,44 @@ local function setupLighting()
 		return inst
 	end
 
+	local depth = Lighting:FindFirstChildOfClass("DepthOfFieldEffect")
+	if depth then
+		depth:Destroy()
+	end
+
 	local sky = effect("Sky")
-	sky.StarCount = 4000
+	sky.StarCount = 3000
 	sky.CelestialBodiesShown = true
-	sky.MoonAngularSize = 16
-	sky.SunAngularSize = 12
+	sky.SunAngularSize = 14
 
 	local atmosphere = effect("Atmosphere")
-	atmosphere.Density = 0.33
-	atmosphere.Offset = 0.15
-	atmosphere.Color = Color3.fromRGB(190, 160, 255)
-	atmosphere.Decay = Color3.fromRGB(95, 60, 170)
-	atmosphere.Glare = 0.6
-	atmosphere.Haze = 1.6
+	atmosphere.Density = 0.22
+	atmosphere.Offset = 0.25
+	atmosphere.Color = Color3.fromRGB(205, 225, 255)
+	atmosphere.Decay = Color3.fromRGB(110, 130, 170)
+	atmosphere.Glare = 0
+	atmosphere.Haze = 0.4
 
+	-- Only neon glows, nothing else gets washed out
 	local bloom = effect("BloomEffect")
-	bloom.Intensity = 1
-	bloom.Size = 36
-	bloom.Threshold = 0.85
+	bloom.Intensity = 0.4
+	bloom.Size = 24
+	bloom.Threshold = 1.4
 
 	local rays = effect("SunRaysEffect")
-	rays.Intensity = 0.04
-	rays.Spread = 0.6
+	rays.Intensity = 0.05
+	rays.Spread = 0.5
 
 	local color = effect("ColorCorrectionEffect")
-	color.Saturation = 0.22
-	color.Contrast = 0.12
-	color.Brightness = 0.02
-	color.TintColor = Color3.fromRGB(255, 248, 255)
-
-	local depth = effect("DepthOfFieldEffect")
-	depth.FarIntensity = 0.12
-	depth.FocusDistance = 120
-	depth.InFocusRadius = 140
-	depth.NearIntensity = 0
+	color.Saturation = 0.18
+	color.Contrast = 0.08
+	color.Brightness = 0
+	color.TintColor = Color3.fromRGB(255, 255, 255)
 
 	local clouds = terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
-	clouds.Cover = 0.5
-	clouds.Density = 0.55
-	clouds.Color = Color3.fromRGB(200, 180, 255)
+	clouds.Cover = 0.45
+	clouds.Density = 0.5
+	clouds.Color = Color3.fromRGB(255, 255, 255)
 	clouds.Parent = terrain
 end
 
@@ -181,14 +180,14 @@ local function fill(x0, x1, z0, z1, material, depth)
 end
 
 local function setupTerrainColors()
-	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(78, 150, 72))
-	terrain:SetMaterialColor(Enum.Material.Sand, Color3.fromRGB(215, 175, 115))
-	terrain:SetMaterialColor(Enum.Material.Basalt, Color3.fromRGB(52, 44, 46))
+	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(95, 195, 80))
+	terrain:SetMaterialColor(Enum.Material.Sand, Color3.fromRGB(240, 205, 135))
+	terrain:SetMaterialColor(Enum.Material.Basalt, Color3.fromRGB(70, 58, 60))
 	terrain:SetMaterialColor(Enum.Material.CrackedLava, Color3.fromRGB(255, 110, 30))
-	terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(48, 32, 86))
-	terrain:SetMaterialColor(Enum.Material.Concrete, Color3.fromRGB(78, 80, 104))
-	terrain:SetMaterialColor(Enum.Material.Asphalt, Color3.fromRGB(52, 54, 70))
-	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(88, 80, 104))
+	terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(80, 55, 140))
+	terrain:SetMaterialColor(Enum.Material.Concrete, Color3.fromRGB(150, 155, 175))
+	terrain:SetMaterialColor(Enum.Material.Asphalt, Color3.fromRGB(70, 72, 88))
+	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(120, 125, 140))
 	terrain:SetMaterialColor(Enum.Material.Snow, Color3.fromRGB(225, 225, 255))
 end
 
@@ -317,6 +316,74 @@ local function buildLamp(position, parent, color)
 		CastShadow = false,
 	}, parent)
 	light(bulb, color, 26, 1.6)
+end
+
+-- Training dummy: test your hammer without other players -------------------------
+
+local function buildDummy(position, parent)
+	local model = Instance.new("Model")
+	model.Name = "BonkDummy"
+	local pivot = part({
+		Name = "Pivot",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.8, 5, 5),
+		CFrame = CFrame.new(position + Vector3.new(0, 0.4, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Material = Enum.Material.Wood,
+		Color = Color3.fromRGB(120, 80, 50),
+	}, model)
+	local root = pivot.CFrame * CFrame.Angles(0, 0, math.rad(-90))
+	local function piece(props, offset)
+		local p = Instance.new("Part")
+		for key, value in props do
+			p[key] = value
+		end
+		p.Anchored = false
+		p.CanCollide = false
+		p.CanQuery = false
+		p.Massless = true
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		p.CFrame = root * offset
+		p.Parent = model
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = pivot
+		w.Part1 = p
+		w.Parent = p
+		return p
+	end
+	piece({ Name = "Pole", Size = Vector3.new(0.5, 3, 0.5), Material = Enum.Material.Wood, Color = Color3.fromRGB(110, 75, 45) }, CFrame.new(0, 1.8, 0))
+	local torso = piece({
+		Name = "Torso",
+		Size = Vector3.new(2.4, 2.8, 1.4),
+		Material = Enum.Material.Fabric,
+		Color = Color3.fromRGB(235, 200, 140),
+	}, CFrame.new(0, 4.6, 0))
+	piece({
+		Name = "Target",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.2, 1.8, 1.8),
+		Material = Enum.Material.SmoothPlastic,
+		Color = Color3.fromRGB(230, 60, 60),
+	}, CFrame.new(0, 4.6, -0.75) * CFrame.Angles(0, math.rad(90), 0))
+	piece({
+		Name = "Head",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(2, 2, 2),
+		Material = Enum.Material.Fabric,
+		Color = Color3.fromRGB(235, 200, 140),
+	}, CFrame.new(0, 6.9, 0))
+	for _, side in { -1, 1 } do
+		piece({
+			Name = "Arm",
+			Size = Vector3.new(2.2, 0.6, 0.6),
+			Material = Enum.Material.Fabric,
+			Color = Color3.fromRGB(220, 185, 125),
+		}, CFrame.new(side * 2.2, 5.3, 0) * CFrame.Angles(0, 0, side * 0.3))
+	end
+	local gui, text = billboard(torso, "🎯 BONK DUMMY\nequip Hammer [1] and click", UDim2.fromOffset(220, 56), Vector3.new(0, 5.5, 0), Color3.fromRGB(255, 230, 120), 80)
+	gui.Name = "DummyGui"
+	model.Parent = parent
+	return { Model = model, Pivot = pivot, Base = pivot.CFrame, Torso = torso, Label = text, Hits = 0 }
 end
 
 -- Plots ------------------------------------------------------------------------------
@@ -498,7 +565,7 @@ local function buildPlot(index, parent)
 			local lockGui = billboard(
 				pedestal,
 				"🔒 Buy in Shop",
-				UDim2.new(6, 0, 1.4, 0),
+				UDim2.fromOffset(130, 30),
 				Vector3.new(0, 2.2, 0),
 				Color3.fromRGB(210, 210, 220),
 				70
@@ -514,7 +581,7 @@ local function buildPlot(index, parent)
 		Name = "SpeedPad",
 		Size = Vector3.new(22, 0.3, 8),
 		Position = Vector3.new(cx, 0.65, cz - halfZ + 5.6),
-		Material = Enum.Material.Neon,
+		Material = Enum.Material.SmoothPlastic,
 		Color = Color3.fromRGB(50, 190, 255),
 		CanCollide = false,
 		CastShadow = false,
@@ -535,7 +602,7 @@ local function buildPlot(index, parent)
 	billboard(
 		speedPad,
 		"⚡ SPEED PAD ⚡\n+speed every second",
-		UDim2.new(14, 0, 3.2, 0),
+		UDim2.fromOffset(220, 64),
 		Vector3.new(0, 3.4, 0),
 		Color3.fromRGB(170, 235, 255),
 		110
@@ -546,7 +613,7 @@ local function buildPlot(index, parent)
 		Name = "CollectPad",
 		Size = Vector3.new(11, 0.3, 8),
 		Position = Vector3.new(cx - 17, 0.65, cz + halfZ - 6),
-		Material = Enum.Material.Neon,
+		Material = Enum.Material.SmoothPlastic,
 		Color = Color3.fromRGB(70, 225, 100),
 		CanCollide = false,
 		CastShadow = false,
@@ -556,7 +623,7 @@ local function buildPlot(index, parent)
 	local _, bankLabel = billboard(
 		collectPad,
 		"💰 $0\nstep to collect",
-		UDim2.new(10, 0, 3.4, 0),
+		UDim2.fromOffset(200, 64),
 		Vector3.new(0, 3.4, 0),
 		Color3.fromRGB(180, 255, 180),
 		110
@@ -567,7 +634,7 @@ local function buildPlot(index, parent)
 		Name = "LockPad",
 		Size = Vector3.new(9, 0.3, 8),
 		Position = Vector3.new(cx + 18, 0.65, cz + halfZ - 6),
-		Material = Enum.Material.Neon,
+		Material = Enum.Material.SmoothPlastic,
 		Color = Color3.fromRGB(255, 60, 80),
 		CanCollide = false,
 		CastShadow = false,
@@ -576,7 +643,7 @@ local function buildPlot(index, parent)
 	local _, lockLabel = billboard(
 		lockPad,
 		"🔒 LOCK BASE",
-		UDim2.new(9, 0, 2.4, 0),
+		UDim2.fromOffset(170, 40),
 		Vector3.new(0, 3.2, 0),
 		Color3.fromRGB(255, 190, 190),
 		110
@@ -969,6 +1036,12 @@ function MapBuilder.Build()
 	spawn.Transparency = 0.3
 	spawn.Parent = mapFolder
 	info.Spawn = spawn
+
+	-- Training dummies next to the spawn, facing the player spawn area
+	info.Dummies = {}
+	for _, x in { -26, 26 } do
+		table.insert(info.Dummies, buildDummy(Vector3.new(x, 0, 30), mapFolder))
+	end
 
 	local titleAnchor = deco({
 		Name = "Title",

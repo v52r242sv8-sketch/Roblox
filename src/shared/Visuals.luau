@@ -135,9 +135,10 @@ local function itemBillboard(root, item, height, showIncome)
 
 	local gui = make("BillboardGui", {
 		Name = "ItemGui",
-		Size = UDim2.new(8, 0, 3.4, 0),
+		-- Pixel size: readable from afar, never fills the screen up close
+		Size = UDim2.fromOffset(190, 92),
 		StudsOffsetWorldSpace = Vector3.new(0, height / 2 + 2.4, 0),
-		MaxDistance = 120,
+		MaxDistance = 90,
 		LightInfluence = 0,
 	}, root)
 
@@ -614,6 +615,23 @@ function Visuals.HammerTool(big)
 		Material = Enum.Material.Fabric,
 		Color = Color3.fromRGB(40, 40, 50),
 	}, CFrame.new(0, -1.3 * scale, 0))
+
+	-- Swing trail (enabled by the server for a moment on every swing)
+	local head = tool:FindFirstChild("Head")
+	if head then
+		local a0 = make("Attachment", { Name = "TrailA", Position = Vector3.new(1.3 * scale, 0, 0) }, head)
+		local a1 = make("Attachment", { Name = "TrailB", Position = Vector3.new(-1.3 * scale, 0, 0) }, head)
+		make("Trail", {
+			Name = "SwingTrail",
+			Attachment0 = a0,
+			Attachment1 = a1,
+			Lifetime = 0.25,
+			LightEmission = 0.8,
+			Color = ColorSequence.new(Color3.new(1, 1, 1), headColor),
+			Transparency = NumberSequence.new(0.2, 1),
+			Enabled = false,
+		}, head)
+	end
 
 	make("Sound", { Name = "Swing", SoundId = "rbxasset://sounds/swordslash.wav", Volume = 0.6 }, handle)
 	make("Sound", { Name = "Hit", SoundId = "rbxasset://sounds/hit.wav", Volume = 0.9 }, handle)

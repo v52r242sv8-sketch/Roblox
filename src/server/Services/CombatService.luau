@@ -3,6 +3,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -77,6 +78,36 @@ function CombatService.Hit(attacker, victim, direction)
 	end
 end
 
+function CombatService.HitDummy(dummy, direction)
+	dummy.Hits += 1
+	dummy.Label.Text = "🎯 BONK DUMMY\nbonks: " .. dummy.Hits
+	Remotes.Effect:FireAllClients("Bonk", dummy.Torso.Position)
+	-- Wobble away from the hit and spring back
+	local away = direction
+	if away.Magnitude < 0.1 then
+		away = Vector3.new(0, 0, 1)
+	end
+	local axis = Vector3.new(0, 1, 0):Cross(away.Unit)
+	local tilt = CFrame.fromAxisAngle(axis, math.rad(35))
+	local tiltBack = CFrame.fromAxisAngle(axis, math.rad(-12))
+	local base = dummy.Base
+	local position = base.Position
+	local rotation = base - position
+	task.spawn(function()
+		local out = TweenService:Create(dummy.Pivot, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
+			CFrame = CFrame.new(position) * tilt * rotation,
+		})
+		out:Play()
+		out.Completed:Wait()
+		local back = TweenService:Create(dummy.Pivot, TweenInfo.new(0.25, Enum.EasingStyle.Sine), {
+			CFrame = CFrame.new(position) * tiltBack * rotation,
+		})
+		back:Play()
+		back.Completed:Wait()
+		TweenService:Create(dummy.Pivot, TweenInfo.new(0.5, Enum.EasingStyle.Elastic), { CFrame = base }):Play()
+	end)
+end
+
 function CombatService.Swing(player, tool, big)
 	local cooldown = Config.Bonk.Cooldown
 	local range = Config.Bonk.Range
@@ -98,8 +129,16 @@ function CombatService.Swing(player, tool, big)
 		return -- hands are full
 	end
 
-	-- Swing animation (rotates the shoulder joint) + sound
+	-- Swing animation (rotates the shoulder joint), trail + sound
 	Services.Player.PlaySwing(player)
+	local head = tool:FindFirstChild("Head")
+	local trail = head and head:FindFirstChild("SwingTrail")
+	if trail then
+		trail.Enabled = true
+		task.delay(0.4, function()
+			trail.Enabled = false
+		end)
+	end
 	local handle = tool:FindFirstChild("Handle")
 	if handle then
 		local swing = handle:FindFirstChild("Swing")
@@ -130,6 +169,16 @@ function CombatService.Swing(player, tool, big)
 					end
 				end
 			end
+		end
+	end
+
+	-- Training dummies
+	for _, dummy in Services.Map.Dummies or {} do
+		local offset = dummy.Torso.Position - root.Position
+		local flat = Vector3.new(offset.X, 0, offset.Z)
+		if flat.Magnitude <= range + 1.5 and (flat.Magnitude < 3 or flat.Unit:Dot(facing) > 0.15) then
+			hitSomeone = true
+			CombatService.HitDummy(dummy, flat)
 		end
 	end
 

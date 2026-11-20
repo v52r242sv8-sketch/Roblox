@@ -1,13 +1,13 @@
 <roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
-	<Item class="ReplicatedStorage" referent="RBXADFF82EE2BEE4684845BEC7B4BCBF0EF">
+	<Item class="ReplicatedStorage" referent="RBXF1C8500342624521911356C8D178CA1F">
 		<Properties>
 			<string name="Name">ReplicatedStorage</string>
 		</Properties>
-		<Item class="Folder" referent="RBXA8189C6499EC41AEB7ED8C1AC2DC0BEB">
+		<Item class="Folder" referent="RBXD8554738B16043E1B622F350BDE7E7D7">
 			<Properties>
 				<string name="Name">Shared</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX54E17C247E2048149EEB529194272457">
+			<Item class="ModuleScript" referent="RBX6362F2917A1B4456970FCEC1A306CCF9">
 				<Properties>
 					<string name="Name">Config</string>
 					<ProtectedString name="Source"><![CDATA[-- Config: every balance number for Steal a Meteor lives here.
@@ -247,7 +247,7 @@ return Config
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX8905A10B39C04B8DAAE81A868807BAA1">
+			<Item class="ModuleScript" referent="RBX10FB92DFE86B418DA96FC6EFD8694D63">
 				<Properties>
 					<string name="Name">Remotes</string>
 					<ProtectedString name="Source"><![CDATA[-- Creates (server) or waits for (client) every remote the game uses.
@@ -308,7 +308,7 @@ return Remotes
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX830B2EFFC8C64A20B8BA9A6084D60D8B">
+			<Item class="ModuleScript" referent="RBX1E6E10C0802F4671A527FF16C6A2CA11">
 				<Properties>
 					<string name="Name">Util</string>
 					<ProtectedString name="Source"><![CDATA[-- Small helpers shared by server and client.
@@ -444,7 +444,7 @@ return Util
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX650ED763DCF548BE9AD8A87F8C1D8F8B">
+			<Item class="ModuleScript" referent="RBX47AD5EC98A0D4C518F2C6D8D008DE78D">
 				<Properties>
 					<string name="Name">Visuals</string>
 					<ProtectedString name="Source"><![CDATA[-- Visuals: builds every model in code (meteors, Meteorlings, hammer, warning circles).
@@ -584,9 +584,10 @@ local function itemBillboard(root, item, height, showIncome)
 
 	local gui = make("BillboardGui", {
 		Name = "ItemGui",
-		Size = UDim2.new(8, 0, 3.4, 0),
+		-- Pixel size: readable from afar, never fills the screen up close
+		Size = UDim2.fromOffset(190, 92),
 		StudsOffsetWorldSpace = Vector3.new(0, height / 2 + 2.4, 0),
-		MaxDistance = 120,
+		MaxDistance = 90,
 		LightInfluence = 0,
 	}, root)
 
@@ -1064,6 +1065,23 @@ function Visuals.HammerTool(big)
 		Color = Color3.fromRGB(40, 40, 50),
 	}, CFrame.new(0, -1.3 * scale, 0))
 
+	-- Swing trail (enabled by the server for a moment on every swing)
+	local head = tool:FindFirstChild("Head")
+	if head then
+		local a0 = make("Attachment", { Name = "TrailA", Position = Vector3.new(1.3 * scale, 0, 0) }, head)
+		local a1 = make("Attachment", { Name = "TrailB", Position = Vector3.new(-1.3 * scale, 0, 0) }, head)
+		make("Trail", {
+			Name = "SwingTrail",
+			Attachment0 = a0,
+			Attachment1 = a1,
+			Lifetime = 0.25,
+			LightEmission = 0.8,
+			Color = ColorSequence.new(Color3.new(1, 1, 1), headColor),
+			Transparency = NumberSequence.new(0.2, 1),
+			Enabled = false,
+		}, head)
+	end
+
 	make("Sound", { Name = "Swing", SoundId = "rbxasset://sounds/swordslash.wav", Volume = 0.6 }, handle)
 	make("Sound", { Name = "Hit", SoundId = "rbxasset://sounds/hit.wav", Volume = 0.9 }, handle)
 	return tool
@@ -1075,15 +1093,15 @@ return Visuals
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBXBF3116EC2C1B4D14B34155589D8B31D6">
+	<Item class="ServerScriptService" referent="RBX68E710EF30644F99986B05D484F0B913">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBXB4FDA1663ED04C4B9734A9E11C12ACFD">
+		<Item class="Folder" referent="RBX2E4756F151C7435396C83F7A42EB327A">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="Script" referent="RBX36596FF7C07040B6B6BE721400B6E648">
+			<Item class="Script" referent="RBX76A3245C7F454509AF47CAE7440AD8B8">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Steal a Meteor: server entry point.
@@ -1196,11 +1214,11 @@ end)
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Folder" referent="RBX764E6660AAD747DC8A0515B7FB9E4522">
+			<Item class="Folder" referent="RBX33CD3BAEF26E445FBCF8874816AA3E39">
 				<Properties>
 					<string name="Name">Modules</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX7DF0FCB7783746A7B8138BAE53F1002E">
+				<Item class="ModuleScript" referent="RBX389BD9B5644943E7B4D0CAF0E1AB1BEF">
 					<Properties>
 						<string name="Name">MapBuilder</string>
 						<ProtectedString name="Source"><![CDATA[-- MapBuilder: generates the whole world in code (terrain, sky, bases, zones, decor),
@@ -1312,17 +1330,17 @@ end
 -- Sky, light, terrain --------------------------------------------------------------
 
 local function setupLighting()
-	-- Night sky: meteors and neon glow look best in the dark
-	Lighting.ClockTime = 20.3
-	Lighting.GeographicLatitude = 35
-	Lighting.Brightness = 2.6
-	Lighting.Ambient = Color3.fromRGB(85, 75, 125)
-	Lighting.OutdoorAmbient = Color3.fromRGB(130, 120, 185)
-	Lighting.ExposureCompensation = 0.35
-	Lighting.EnvironmentDiffuseScale = 0.6
-	Lighting.EnvironmentSpecularScale = 0.8
+	-- Bright sunny cartoon look (the style of today's top Roblox games)
+	Lighting.ClockTime = 14.3
+	Lighting.GeographicLatitude = 25
+	Lighting.Brightness = 3
+	Lighting.Ambient = Color3.fromRGB(105, 105, 125)
+	Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 170)
+	Lighting.ExposureCompensation = 0
+	Lighting.EnvironmentDiffuseScale = 1
+	Lighting.EnvironmentSpecularScale = 1
 	Lighting.GlobalShadows = true
-	Lighting.ShadowSoftness = 0.25
+	Lighting.ShadowSoftness = 0.2
 
 	local function effect(className)
 		local existing = Lighting:FindFirstChildOfClass(className)
@@ -1334,45 +1352,44 @@ local function setupLighting()
 		return inst
 	end
 
+	local depth = Lighting:FindFirstChildOfClass("DepthOfFieldEffect")
+	if depth then
+		depth:Destroy()
+	end
+
 	local sky = effect("Sky")
-	sky.StarCount = 4000
+	sky.StarCount = 3000
 	sky.CelestialBodiesShown = true
-	sky.MoonAngularSize = 16
-	sky.SunAngularSize = 12
+	sky.SunAngularSize = 14
 
 	local atmosphere = effect("Atmosphere")
-	atmosphere.Density = 0.33
-	atmosphere.Offset = 0.15
-	atmosphere.Color = Color3.fromRGB(190, 160, 255)
-	atmosphere.Decay = Color3.fromRGB(95, 60, 170)
-	atmosphere.Glare = 0.6
-	atmosphere.Haze = 1.6
+	atmosphere.Density = 0.22
+	atmosphere.Offset = 0.25
+	atmosphere.Color = Color3.fromRGB(205, 225, 255)
+	atmosphere.Decay = Color3.fromRGB(110, 130, 170)
+	atmosphere.Glare = 0
+	atmosphere.Haze = 0.4
 
+	-- Only neon glows, nothing else gets washed out
 	local bloom = effect("BloomEffect")
-	bloom.Intensity = 1
-	bloom.Size = 36
-	bloom.Threshold = 0.85
+	bloom.Intensity = 0.4
+	bloom.Size = 24
+	bloom.Threshold = 1.4
 
 	local rays = effect("SunRaysEffect")
-	rays.Intensity = 0.04
-	rays.Spread = 0.6
+	rays.Intensity = 0.05
+	rays.Spread = 0.5
 
 	local color = effect("ColorCorrectionEffect")
-	color.Saturation = 0.22
-	color.Contrast = 0.12
-	color.Brightness = 0.02
-	color.TintColor = Color3.fromRGB(255, 248, 255)
-
-	local depth = effect("DepthOfFieldEffect")
-	depth.FarIntensity = 0.12
-	depth.FocusDistance = 120
-	depth.InFocusRadius = 140
-	depth.NearIntensity = 0
+	color.Saturation = 0.18
+	color.Contrast = 0.08
+	color.Brightness = 0
+	color.TintColor = Color3.fromRGB(255, 255, 255)
 
 	local clouds = terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
-	clouds.Cover = 0.5
-	clouds.Density = 0.55
-	clouds.Color = Color3.fromRGB(200, 180, 255)
+	clouds.Cover = 0.45
+	clouds.Density = 0.5
+	clouds.Color = Color3.fromRGB(255, 255, 255)
 	clouds.Parent = terrain
 end
 
@@ -1386,14 +1403,14 @@ local function fill(x0, x1, z0, z1, material, depth)
 end
 
 local function setupTerrainColors()
-	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(78, 150, 72))
-	terrain:SetMaterialColor(Enum.Material.Sand, Color3.fromRGB(215, 175, 115))
-	terrain:SetMaterialColor(Enum.Material.Basalt, Color3.fromRGB(52, 44, 46))
+	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(95, 195, 80))
+	terrain:SetMaterialColor(Enum.Material.Sand, Color3.fromRGB(240, 205, 135))
+	terrain:SetMaterialColor(Enum.Material.Basalt, Color3.fromRGB(70, 58, 60))
 	terrain:SetMaterialColor(Enum.Material.CrackedLava, Color3.fromRGB(255, 110, 30))
-	terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(48, 32, 86))
-	terrain:SetMaterialColor(Enum.Material.Concrete, Color3.fromRGB(78, 80, 104))
-	terrain:SetMaterialColor(Enum.Material.Asphalt, Color3.fromRGB(52, 54, 70))
-	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(88, 80, 104))
+	terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(80, 55, 140))
+	terrain:SetMaterialColor(Enum.Material.Concrete, Color3.fromRGB(150, 155, 175))
+	terrain:SetMaterialColor(Enum.Material.Asphalt, Color3.fromRGB(70, 72, 88))
+	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(120, 125, 140))
 	terrain:SetMaterialColor(Enum.Material.Snow, Color3.fromRGB(225, 225, 255))
 end
 
@@ -1522,6 +1539,74 @@ local function buildLamp(position, parent, color)
 		CastShadow = false,
 	}, parent)
 	light(bulb, color, 26, 1.6)
+end
+
+-- Training dummy: test your hammer without other players -------------------------
+
+local function buildDummy(position, parent)
+	local model = Instance.new("Model")
+	model.Name = "BonkDummy"
+	local pivot = part({
+		Name = "Pivot",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.8, 5, 5),
+		CFrame = CFrame.new(position + Vector3.new(0, 0.4, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Material = Enum.Material.Wood,
+		Color = Color3.fromRGB(120, 80, 50),
+	}, model)
+	local root = pivot.CFrame * CFrame.Angles(0, 0, math.rad(-90))
+	local function piece(props, offset)
+		local p = Instance.new("Part")
+		for key, value in props do
+			p[key] = value
+		end
+		p.Anchored = false
+		p.CanCollide = false
+		p.CanQuery = false
+		p.Massless = true
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		p.CFrame = root * offset
+		p.Parent = model
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = pivot
+		w.Part1 = p
+		w.Parent = p
+		return p
+	end
+	piece({ Name = "Pole", Size = Vector3.new(0.5, 3, 0.5), Material = Enum.Material.Wood, Color = Color3.fromRGB(110, 75, 45) }, CFrame.new(0, 1.8, 0))
+	local torso = piece({
+		Name = "Torso",
+		Size = Vector3.new(2.4, 2.8, 1.4),
+		Material = Enum.Material.Fabric,
+		Color = Color3.fromRGB(235, 200, 140),
+	}, CFrame.new(0, 4.6, 0))
+	piece({
+		Name = "Target",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.2, 1.8, 1.8),
+		Material = Enum.Material.SmoothPlastic,
+		Color = Color3.fromRGB(230, 60, 60),
+	}, CFrame.new(0, 4.6, -0.75) * CFrame.Angles(0, math.rad(90), 0))
+	piece({
+		Name = "Head",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(2, 2, 2),
+		Material = Enum.Material.Fabric,
+		Color = Color3.fromRGB(235, 200, 140),
+	}, CFrame.new(0, 6.9, 0))
+	for _, side in { -1, 1 } do
+		piece({
+			Name = "Arm",
+			Size = Vector3.new(2.2, 0.6, 0.6),
+			Material = Enum.Material.Fabric,
+			Color = Color3.fromRGB(220, 185, 125),
+		}, CFrame.new(side * 2.2, 5.3, 0) * CFrame.Angles(0, 0, side * 0.3))
+	end
+	local gui, text = billboard(torso, "🎯 BONK DUMMY\nequip Hammer [1] and click", UDim2.fromOffset(220, 56), Vector3.new(0, 5.5, 0), Color3.fromRGB(255, 230, 120), 80)
+	gui.Name = "DummyGui"
+	model.Parent = parent
+	return { Model = model, Pivot = pivot, Base = pivot.CFrame, Torso = torso, Label = text, Hits = 0 }
 end
 
 -- Plots ------------------------------------------------------------------------------
@@ -1703,7 +1788,7 @@ local function buildPlot(index, parent)
 			local lockGui = billboard(
 				pedestal,
 				"🔒 Buy in Shop",
-				UDim2.new(6, 0, 1.4, 0),
+				UDim2.fromOffset(130, 30),
 				Vector3.new(0, 2.2, 0),
 				Color3.fromRGB(210, 210, 220),
 				70
@@ -1719,7 +1804,7 @@ local function buildPlot(index, parent)
 		Name = "SpeedPad",
 		Size = Vector3.new(22, 0.3, 8),
 		Position = Vector3.new(cx, 0.65, cz - halfZ + 5.6),
-		Material = Enum.Material.Neon,
+		Material = Enum.Material.SmoothPlastic,
 		Color = Color3.fromRGB(50, 190, 255),
 		CanCollide = false,
 		CastShadow = false,
@@ -1740,7 +1825,7 @@ local function buildPlot(index, parent)
 	billboard(
 		speedPad,
 		"⚡ SPEED PAD ⚡\n+speed every second",
-		UDim2.new(14, 0, 3.2, 0),
+		UDim2.fromOffset(220, 64),
 		Vector3.new(0, 3.4, 0),
 		Color3.fromRGB(170, 235, 255),
 		110
@@ -1751,7 +1836,7 @@ local function buildPlot(index, parent)
 		Name = "CollectPad",
 		Size = Vector3.new(11, 0.3, 8),
 		Position = Vector3.new(cx - 17, 0.65, cz + halfZ - 6),
-		Material = Enum.Material.Neon,
+		Material = Enum.Material.SmoothPlastic,
 		Color = Color3.fromRGB(70, 225, 100),
 		CanCollide = false,
 		CastShadow = false,
@@ -1761,7 +1846,7 @@ local function buildPlot(index, parent)
 	local _, bankLabel = billboard(
 		collectPad,
 		"💰 $0\nstep to collect",
-		UDim2.new(10, 0, 3.4, 0),
+		UDim2.fromOffset(200, 64),
 		Vector3.new(0, 3.4, 0),
 		Color3.fromRGB(180, 255, 180),
 		110
@@ -1772,7 +1857,7 @@ local function buildPlot(index, parent)
 		Name = "LockPad",
 		Size = Vector3.new(9, 0.3, 8),
 		Position = Vector3.new(cx + 18, 0.65, cz + halfZ - 6),
-		Material = Enum.Material.Neon,
+		Material = Enum.Material.SmoothPlastic,
 		Color = Color3.fromRGB(255, 60, 80),
 		CanCollide = false,
 		CastShadow = false,
@@ -1781,7 +1866,7 @@ local function buildPlot(index, parent)
 	local _, lockLabel = billboard(
 		lockPad,
 		"🔒 LOCK BASE",
-		UDim2.new(9, 0, 2.4, 0),
+		UDim2.fromOffset(170, 40),
 		Vector3.new(0, 3.2, 0),
 		Color3.fromRGB(255, 190, 190),
 		110
@@ -2175,6 +2260,12 @@ function MapBuilder.Build()
 	spawn.Parent = mapFolder
 	info.Spawn = spawn
 
+	-- Training dummies next to the spawn, facing the player spawn area
+	info.Dummies = {}
+	for _, x in { -26, 26 } do
+		table.insert(info.Dummies, buildDummy(Vector3.new(x, 0, 30), mapFolder))
+	end
+
 	local titleAnchor = deco({
 		Name = "Title",
 		Size = Vector3.new(1, 1, 1),
@@ -2205,11 +2296,11 @@ return MapBuilder
 					</Properties>
 				</Item>
 			</Item>
-			<Item class="Folder" referent="RBX133C6F6BDEB044108E5BC9A730798372">
+			<Item class="Folder" referent="RBXBE2A79BBF7424AA18AF4FF725AFE6008">
 				<Properties>
 					<string name="Name">Services</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBXF8496E1D94A845C8AB184F2BE2A2848D">
+				<Item class="ModuleScript" referent="RBX10A88F623EC74806BF5EB798FA06FB7A">
 					<Properties>
 						<string name="Name">CombatService</string>
 						<ProtectedString name="Source"><![CDATA[-- CombatService: the Hammer. Bonk a player to knock them back and make them drop
@@ -2217,6 +2308,7 @@ return MapBuilder
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -2291,6 +2383,36 @@ function CombatService.Hit(attacker, victim, direction)
 	end
 end
 
+function CombatService.HitDummy(dummy, direction)
+	dummy.Hits += 1
+	dummy.Label.Text = "🎯 BONK DUMMY\nbonks: " .. dummy.Hits
+	Remotes.Effect:FireAllClients("Bonk", dummy.Torso.Position)
+	-- Wobble away from the hit and spring back
+	local away = direction
+	if away.Magnitude < 0.1 then
+		away = Vector3.new(0, 0, 1)
+	end
+	local axis = Vector3.new(0, 1, 0):Cross(away.Unit)
+	local tilt = CFrame.fromAxisAngle(axis, math.rad(35))
+	local tiltBack = CFrame.fromAxisAngle(axis, math.rad(-12))
+	local base = dummy.Base
+	local position = base.Position
+	local rotation = base - position
+	task.spawn(function()
+		local out = TweenService:Create(dummy.Pivot, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
+			CFrame = CFrame.new(position) * tilt * rotation,
+		})
+		out:Play()
+		out.Completed:Wait()
+		local back = TweenService:Create(dummy.Pivot, TweenInfo.new(0.25, Enum.EasingStyle.Sine), {
+			CFrame = CFrame.new(position) * tiltBack * rotation,
+		})
+		back:Play()
+		back.Completed:Wait()
+		TweenService:Create(dummy.Pivot, TweenInfo.new(0.5, Enum.EasingStyle.Elastic), { CFrame = base }):Play()
+	end)
+end
+
 function CombatService.Swing(player, tool, big)
 	local cooldown = Config.Bonk.Cooldown
 	local range = Config.Bonk.Range
@@ -2312,8 +2434,16 @@ function CombatService.Swing(player, tool, big)
 		return -- hands are full
 	end
 
-	-- Swing animation (rotates the shoulder joint) + sound
+	-- Swing animation (rotates the shoulder joint), trail + sound
 	Services.Player.PlaySwing(player)
+	local head = tool:FindFirstChild("Head")
+	local trail = head and head:FindFirstChild("SwingTrail")
+	if trail then
+		trail.Enabled = true
+		task.delay(0.4, function()
+			trail.Enabled = false
+		end)
+	end
 	local handle = tool:FindFirstChild("Handle")
 	if handle then
 		local swing = handle:FindFirstChild("Swing")
@@ -2347,6 +2477,16 @@ function CombatService.Swing(player, tool, big)
 		end
 	end
 
+	-- Training dummies
+	for _, dummy in Services.Map.Dummies or {} do
+		local offset = dummy.Torso.Position - root.Position
+		local flat = Vector3.new(offset.X, 0, offset.Z)
+		if flat.Magnitude <= range + 1.5 and (flat.Magnitude < 3 or flat.Unit:Dot(facing) > 0.15) then
+			hitSomeone = true
+			CombatService.HitDummy(dummy, flat)
+		end
+	end
+
 	if hitSomeone and handle then
 		local hit = handle:FindFirstChild("Hit")
 		if hit then
@@ -2359,7 +2499,7 @@ return CombatService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBXB62139DC03BE4B379CD1AE1813EC2C76">
+				<Item class="ModuleScript" referent="RBX7421045E408741ABB882769C70D1EF20">
 					<Properties>
 						<string name="Name">DataService</string>
 						<ProtectedString name="Source"><![CDATA[-- DataService: loads/saves player data with DataStoreService and pushes a state
@@ -2627,7 +2767,7 @@ return DataService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX5BBF7F7C5D2944B2BE4448227D29BF07">
+				<Item class="ModuleScript" referent="RBXAF159EB0A684462D8AB83F0E34F9B564">
 					<Properties>
 						<string name="Name">EventService</string>
 						<ProtectedString name="Source"><![CDATA[-- EventService: server-wide moments that make the whole lobby scream.
@@ -2657,7 +2797,7 @@ local function tintSky(on)
 	if not atmosphere then
 		return
 	end
-	local goal = { Color = Color3.fromRGB(200, 170, 255), Decay = Color3.fromRGB(110, 80, 160) }
+	local goal = { Color = Color3.fromRGB(205, 225, 255), Decay = Color3.fromRGB(110, 130, 170) }
 	if on then
 		goal = { Color = Color3.fromRGB(255, 150, 90), Decay = Color3.fromRGB(200, 60, 60) }
 	end
@@ -2756,7 +2896,7 @@ return EventService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX6BEC50F6A236481694C8D43E4E097B9B">
+				<Item class="ModuleScript" referent="RBXC9EA9219828A4A55AAD08961B53C13D5">
 					<Properties>
 						<string name="Name">MeteorService</string>
 						<ProtectedString name="Source"><![CDATA[-- MeteorService: meteors falling from the sky, grabbing, carrying them over your head,
@@ -3322,7 +3462,7 @@ return MeteorService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX5EE52058454F4D55A11466A2905F7B1C">
+				<Item class="ModuleScript" referent="RBX25977E9F10A24F16BAE25A1518718F09">
 					<Properties>
 						<string name="Name">PlayerService</string>
 						<ProtectedString name="Source"><![CDATA[-- PlayerService: characters, walk speed, game pass ownership and all player multipliers.
@@ -3701,7 +3841,7 @@ return PlayerService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX35C0B1E184DD43E9B647CBD14C378F0F">
+				<Item class="ModuleScript" referent="RBX069A1A4311DD413B9A6E7D80960C2FE0">
 					<Properties>
 						<string name="Name">PlotService</string>
 						<ProtectedString name="Source"><![CDATA[-- PlotService: player bases. Pedestals, hatching, income, the Speed/Collect/Lock pads
@@ -4279,7 +4419,7 @@ return PlotService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX1CE6270A581B4CDB8F3C6659573B062D">
+				<Item class="ModuleScript" referent="RBXD0AA9CAEBCC64F6D8751BD94E4D3C265">
 					<Properties>
 						<string name="Name">ShopService</string>
 						<ProtectedString name="Source"><![CDATA[-- ShopService: in-game cash purchases (boots, pedestals, rebirth) and Robux purchases.
@@ -4455,23 +4595,23 @@ return ShopService
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBXC484DE4398454EEC99DDE583DB0D925C">
+	<Item class="StarterPlayer" referent="RBX1D776A53059241EA880B3AE86BB5088E">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX049DD18CBE0A477D96B78868D0CC38B2">
+		<Item class="StarterPlayerScripts" referent="RBXAEECBB91CAC8464EA2B13F8413DD68A9">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX430DA9E46D5B49A7A4AB65AB1C3A3DAE">
+			<Item class="Folder" referent="RBX36F7C8ACDC3F434E80F1CA3676534736">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="Folder" referent="RBX4106FFE642A3472E99B3CF9520E06AE9">
+				<Item class="Folder" referent="RBXFADAE0E94C5D4586A8F0E02CA208AFB8">
 					<Properties>
 						<string name="Name">Controllers</string>
 					</Properties>
-					<Item class="ModuleScript" referent="RBXFB2DA0AB746E409DA560BAFF3D568FB6">
+					<Item class="ModuleScript" referent="RBX83D939D2861246F1A74F050E49CF5B8E">
 						<Properties>
 							<string name="Name">Effects</string>
 							<ProtectedString name="Source"><![CDATA[-- Effects: knockback, camera shake, impact shockwaves with debris, hatch bursts, sounds.
@@ -4820,7 +4960,7 @@ return Effects
 ]]></ProtectedString>
 						</Properties>
 					</Item>
-					<Item class="ModuleScript" referent="RBX71693B42DA5D470EB3B7D77E0B98C89A">
+					<Item class="ModuleScript" referent="RBX970763B8CB214C0BBAA0D3CE5F20EB1F">
 						<Properties>
 							<string name="Name">UI</string>
 							<ProtectedString name="Source"><![CDATA[-- UI: the whole HUD built in code.
@@ -5123,148 +5263,229 @@ local function setBlur(on)
 	TweenService:Create(blur, TweenInfo.new(0.25), { Size = size }):Play()
 end
 
--- Top bar -------------------------------------------------------------------------
+-- Left HUD: cash, income, speed and the big tile buttons ------------------------
 
-local function buildTopBar()
-	local top = scaled(create("Frame", {
-		Name = "TopBar",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 8),
-		Size = UDim2.fromOffset(380, 130),
+local function hudStat(parent, order, iconText, iconColor, height)
+	local row = create("Frame", {
+		LayoutOrder = order,
+		Size = UDim2.new(1, 0, 0, height),
 		BackgroundTransparency = 1,
-		Parent = gui,
-	}))
-	refs.TopBar = top
-
-	-- Cash pill
-	create("Frame", {
-		Name = "CashShadow",
-		Position = UDim2.fromOffset(0, 5),
-		Size = UDim2.new(1, 0, 0, 74),
-		BackgroundColor3 = BLACK,
-		BackgroundTransparency = 0.55,
-		Parent = top,
-	}, { corner(37) })
-	local cash = create("Frame", {
-		Name = "Cash",
-		Size = UDim2.new(1, 0, 0, 74),
-		BackgroundColor3 = WHITE,
-		Parent = top,
-	}, {
-		corner(37),
-		stroke(Color3.fromRGB(90, 55, 0), 3),
-		gradient(Color3.fromRGB(255, 232, 120), Color3.fromRGB(245, 160, 30)),
+		Parent = parent,
 	})
-	create("Frame", {
-		Name = "Shine",
-		Position = UDim2.new(0, 12, 0, 4),
-		Size = UDim2.new(1, -24, 0, 26),
+	local icon = create("Frame", {
+		Name = "Icon",
+		Position = UDim2.fromOffset(0, (height - (height - 6)) / 2),
+		Size = UDim2.fromOffset(height - 6, height - 6),
 		BackgroundColor3 = WHITE,
-		BackgroundTransparency = 0.7,
-		Parent = cash,
-	}, { corner(13) })
-	local coin = create("Frame", {
-		Name = "Coin",
-		Position = UDim2.fromOffset(8, 7),
-		Size = UDim2.fromOffset(60, 60),
-		BackgroundColor3 = WHITE,
-		Parent = cash,
-	}, {
-		round(),
-		stroke(Color3.fromRGB(120, 70, 0), 3),
-		gradient(Color3.fromRGB(255, 240, 150), Color3.fromRGB(230, 140, 20)),
-	})
-	label({ Size = UDim2.fromScale(1, 1), Text = "$", Parent = coin }, 3)
-	refs.Coin = coin
-	refs.Money = label({
-		Name = "Money",
-		Position = UDim2.new(0, 76, 0, 4),
-		Size = UDim2.new(1, -92, 0, 42),
-		Text = "$0",
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = cash,
-	}, 3)
-	refs.Income = label({
-		Name = "Income",
-		Position = UDim2.new(0, 78, 0, 44),
-		Size = UDim2.new(1, -92, 0, 24),
-		Text = "+$0/s",
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Color3.fromRGB(255, 255, 220),
-		Parent = cash,
-	}, 2)
-
-	-- Speed bar
-	local speed = create("Frame", {
-		Name = "Speed",
-		Position = UDim2.new(0, 24, 0, 86),
-		Size = UDim2.new(1, -48, 0, 36),
-		BackgroundColor3 = Color3.fromRGB(20, 18, 40),
-		BackgroundTransparency = 0.1,
-		ClipsDescendants = true,
-		Parent = top,
+		Parent = row,
 	}, {
 		round(),
 		stroke(BLACK, 3),
+		gradient(iconColor:Lerp(WHITE, 0.35), iconColor:Lerp(BLACK, 0.15)),
 	})
+	label({ Size = UDim2.fromScale(1, 1), Text = iconText, Parent = icon }, 2)
+	local text = label({
+		Position = UDim2.fromOffset(height + 2, 0),
+		Size = UDim2.new(1, -(height + 2), 1, 0),
+		Text = "",
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = row,
+	}, 3)
+	return row, icon, text
+end
+
+local function buildTopBar()
+	local hud = scaled(create("Frame", {
+		Name = "LeftHud",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 14, 0.5, 10),
+		Size = UDim2.fromOffset(250, 560),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	}, {
+		create("UIListLayout", {
+			Padding = UDim.new(0, 6),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+		}),
+	}))
+	refs.TopBar = hud
+	refs.Hud = hud
+
+	local _, coin, money = hudStat(hud, 1, "$", GOLD, 58)
+	money.TextColor3 = Color3.fromRGB(120, 255, 90)
+	money.Text = "$0"
+	refs.Coin = coin
+	refs.Money = money
+
+	refs.Income = label({
+		LayoutOrder = 2,
+		Size = UDim2.new(1, 0, 0, 24),
+		Text = "+$0/s",
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(255, 235, 120),
+		Parent = hud,
+	}, 2)
+
+	local _, _, speed = hudStat(hud, 3, "⚡", Color3.fromRGB(70, 200, 255), 44)
+	speed.TextColor3 = Color3.fromRGB(130, 225, 255)
+	speed.Text = "16"
+	refs.Speed = speed
+
+	-- Speed progress bar
+	local bar = create("Frame", {
+		LayoutOrder = 4,
+		Size = UDim2.new(1, -20, 0, 16),
+		BackgroundColor3 = Color3.fromRGB(25, 25, 40),
+		ClipsDescendants = true,
+		Parent = hud,
+	}, { round(), stroke(BLACK, 3) })
 	local fill = create("Frame", {
 		Name = "Fill",
 		Size = UDim2.fromScale(0.05, 1),
 		BackgroundColor3 = WHITE,
-		Parent = speed,
+		Parent = bar,
 	}, {
 		round(),
-		gradient(Color3.fromRGB(70, 220, 255), Color3.fromRGB(170, 90, 255), 0),
+		gradient(Color3.fromRGB(70, 230, 255), Color3.fromRGB(150, 90, 255), 0),
 	})
-	-- Moving shine across the fill
 	local shimmer = create("UIGradient", {
 		Color = ColorSequence.new(WHITE),
 		Transparency = NumberSequence.new({
 			NumberSequenceKeypoint.new(0, 1),
 			NumberSequenceKeypoint.new(0.42, 1),
-			NumberSequenceKeypoint.new(0.5, 0.45),
+			NumberSequenceKeypoint.new(0.5, 0.4),
 			NumberSequenceKeypoint.new(0.58, 1),
 			NumberSequenceKeypoint.new(1, 1),
 		}),
 		Offset = Vector2.new(-1, 0),
 	})
-	create("Frame", {
-		Name = "Shimmer",
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = WHITE,
-		Parent = fill,
-	}, { round(), shimmer })
+	create("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE, Parent = fill }, { round(), shimmer })
 	TweenService:Create(shimmer, TweenInfo.new(1.6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {
 		Offset = Vector2.new(1, 0),
 	}):Play()
 	refs.SpeedFill = fill
-	refs.Speed = label({
-		Name = "SpeedText",
-		Position = UDim2.new(0, 10, 0, 4),
-		Size = UDim2.new(1, -20, 1, -8),
-		Text = "⚡ 16 Speed",
-		ZIndex = 3,
-		Parent = speed,
+	refs.SpeedSub = label({
+		LayoutOrder = 5,
+		Size = UDim2.new(1, 0, 0, 20),
+		Text = "+1/s on your Speed Pad",
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(200, 235, 255),
+		Parent = hud,
 	}, 2)
+
+	create("Frame", { LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 8), BackgroundTransparency = 1, Parent = hud })
 end
 
--- Left menu -------------------------------------------------------------------
+-- Big square tile button: thick outline, bright gradient, big icon, label overlapping the bottom
+local function tileButton(parent, order, name, icon, color, size)
+	local wrapper = create("Frame", {
+		Name = name,
+		LayoutOrder = order,
+		Size = UDim2.fromOffset(size, size),
+		BackgroundTransparency = 1,
+		Parent = parent,
+	})
+	local pop = create("UIScale", { Parent = wrapper })
+	create("Frame", {
+		Name = "Shadow",
+		Position = UDim2.fromOffset(0, 6),
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = BLACK,
+		BackgroundTransparency = 0.45,
+		Parent = wrapper,
+	}, { corner(22) })
+	local btn = create("TextButton", {
+		Name = "Button",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = WHITE,
+		AutoButtonColor = false,
+		Text = "",
+		Parent = wrapper,
+	}, {
+		corner(22),
+		stroke(BLACK, 4),
+		gradient(color:Lerp(WHITE, 0.35), color:Lerp(BLACK, 0.2)),
+	})
+	-- Inner light rim
+	create("Frame", {
+		Position = UDim2.fromOffset(5, 5),
+		Size = UDim2.new(1, -10, 1, -10),
+		BackgroundTransparency = 1,
+		Parent = btn,
+	}, { corner(17), stroke(WHITE, 2, 0.55) })
+	-- Top gloss
+	create("Frame", {
+		Position = UDim2.fromOffset(8, 6),
+		Size = UDim2.new(1, -16, 0.38, 0),
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 0.78,
+		Parent = btn,
+	}, { corner(14) })
+	-- Icon with a drop shadow
+	label({
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 3, 0.43, 4),
+		Size = UDim2.fromScale(0.68, 0.62),
+		Text = icon,
+		TextColor3 = BLACK,
+		TextTransparency = 0.55,
+		Parent = btn,
+	}, false)
+	local iconLabel = label({
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.43),
+		Size = UDim2.fromScale(0.68, 0.62),
+		Text = icon,
+		Rotation = -6,
+		Parent = btn,
+	}, false)
+	-- Name overlapping the bottom edge
+	label({
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 1, -8),
+		Size = UDim2.new(1.15, 0, 0.34, 0),
+		Text = name,
+		Rotation = -4,
+		ZIndex = 3,
+		Parent = wrapper,
+	}, 4)
+
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(pop, TWEEN_FAST, { Scale = 1.08 }):Play()
+		TweenService:Create(iconLabel, TWEEN_POP, { Rotation = 8 }):Play()
+		if hoverSound then
+			hoverSound:Play()
+		end
+	end)
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(pop, TWEEN_FAST, { Scale = 1 }):Play()
+		TweenService:Create(iconLabel, TWEEN_POP, { Rotation = -6 }):Play()
+	end)
+	btn.MouseButton1Down:Connect(function()
+		TweenService:Create(pop, TWEEN_FAST, { Scale = 0.9 }):Play()
+	end)
+	btn.MouseButton1Up:Connect(function()
+		TweenService:Create(pop, TWEEN_POP, { Scale = 1.08 }):Play()
+	end)
+	return wrapper, btn
+end
 
 local function badge(parent)
 	local b = create("Frame", {
 		Name = "Badge",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(1, -6, 0, 6),
-		Size = UDim2.fromOffset(28, 28),
+		Position = UDim2.new(1, -4, 0, 4),
+		Size = UDim2.fromOffset(32, 32),
 		BackgroundColor3 = RED,
 		Visible = false,
 		ZIndex = 5,
 		Parent = parent,
 	}, {
 		round(),
-		stroke(WHITE, 2),
+		stroke(WHITE, 3),
 	})
-	label({ Size = UDim2.fromScale(1, 1), Text = "!", ZIndex = 6, Parent = b }, 1)
+	label({ Size = UDim2.fromScale(1, 1), Text = "!", ZIndex = 6, Parent = b }, 2)
 	local s = create("UIScale", { Parent = b })
 	TweenService:Create(s, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
 		Scale = 1.2,
@@ -5273,51 +5494,42 @@ local function badge(parent)
 end
 
 local function buildMenu()
-	local menu = scaled(create("Frame", {
-		Name = "Menu",
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 12, 0.5, 0),
-		Size = UDim2.fromOffset(96, 340),
+	local grid = create("Frame", {
+		Name = "Buttons",
+		LayoutOrder = 10,
+		Size = UDim2.fromOffset(240, 230),
 		BackgroundTransparency = 1,
-		Parent = gui,
+		Parent = refs.Hud,
 	}, {
-		create("UIListLayout", {
-			Padding = UDim.new(0, 14),
+		create("UIGridLayout", {
+			CellSize = UDim2.fromOffset(104, 104),
+			CellPadding = UDim2.fromOffset(16, 18),
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			VerticalAlignment = Enum.VerticalAlignment.Center,
 		}),
-	}))
+	})
 
 	local entries = {
-		{ Name = "Shop", Icon = "🛒", Color = Color3.fromRGB(60, 205, 95) },
-		{ Name = "Index", Icon = "📖", Color = Color3.fromRGB(70, 145, 255) },
-		{ Name = "Rebirth", Icon = "🌟", Color = Color3.fromRGB(175, 90, 255) },
+		{ Name = "Shop", Icon = "🛒", Color = Color3.fromRGB(255, 200, 40) },
+		{ Name = "Index", Icon = "📖", Color = Color3.fromRGB(60, 160, 255) },
+		{ Name = "Rebirth", Icon = "🌟", Color = Color3.fromRGB(190, 90, 255) },
+		{ Name = "Boosts", Icon = "🚀", Color = Color3.fromRGB(255, 90, 110) },
 	}
 	refs.Badges = {}
 	for i, entry in entries do
-		local wrapper, btn = fancyButton({
-			Name = entry.Name,
-			LayoutOrder = i,
-			Size = UDim2.fromOffset(92, 92),
-			Text = "",
-			Parent = menu,
-		}, entry.Color)
-		label({
-			Position = UDim2.new(0, 0, 0, -2),
-			Size = UDim2.new(1, 0, 0.66, 0),
-			Text = entry.Icon,
-			Parent = btn,
-		}, false)
-		label({
-			Position = UDim2.new(0, 0, 0.62, 0),
-			Size = UDim2.new(1, 0, 0.36, 0),
-			Text = entry.Name,
-			Parent = btn,
-		}, 2)
+		local wrapper, btn = tileButton(grid, i, entry.Name, entry.Icon, entry.Color, 104)
 		refs.Badges[entry.Name] = badge(wrapper)
 		btn.MouseButton1Click:Connect(function()
 			playClick()
-			UI.TogglePanel(entry.Name)
+			if entry.Name == "Boosts" then
+				UI.TogglePanel("Shop")
+				if refs.ShopScroll and refs.BoostsHeader then
+					task.defer(function()
+						refs.ShopScroll.CanvasPosition = Vector2.new(0, refs.BoostsHeader.AbsolutePosition.Y - refs.ShopScroll.AbsolutePosition.Y + refs.ShopScroll.CanvasPosition.Y)
+					end)
+				end
+			else
+				UI.TogglePanel(entry.Name)
+			end
 		end)
 	end
 end
@@ -5335,8 +5547,8 @@ local function makePanel(name, title, color)
 		Parent = gui,
 	}, {
 		corner(24),
-		stroke(BLACK, 4),
-		gradient(PANEL_TOP, PANEL_BOTTOM),
+		stroke(BLACK, 5),
+		gradient(color:Lerp(WHITE, 0.05), color:Lerp(BLACK, 0.45)),
 	}))
 	local pop = create("UIScale", { Name = "Pop", Parent = panel })
 
@@ -5347,7 +5559,7 @@ local function makePanel(name, title, color)
 		Parent = panel,
 	}, {
 		corner(24),
-		gradient(color:Lerp(WHITE, 0.25), color:Lerp(BLACK, 0.1)),
+		gradient(color:Lerp(WHITE, 0.35), color:Lerp(WHITE, 0.1)),
 	})
 	-- Square off the bottom corners of the header
 	create("Frame", {
@@ -5356,7 +5568,7 @@ local function makePanel(name, title, color)
 		BackgroundColor3 = WHITE,
 		BorderSizePixel = 0,
 		Parent = header,
-	}, { gradient(color:Lerp(WHITE, 0.12), color:Lerp(BLACK, 0.1)) })
+	}, { gradient(color:Lerp(WHITE, 0.2), color:Lerp(WHITE, 0.1)) })
 	label({
 		Position = UDim2.new(0, 22, 0, 10),
 		Size = UDim2.new(1, -110, 1, -20),
@@ -5409,14 +5621,14 @@ local function scrolling(parent)
 end
 
 local function sectionHeader(parent, order, text)
-	label({
+	return label({
 		LayoutOrder = order,
 		Size = UDim2.new(1, 0, 0, 32),
 		Text = text,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Color3.fromRGB(255, 220, 120),
+		TextColor3 = Color3.fromRGB(255, 240, 150),
 		Parent = parent,
-	}, 2)
+	}, 3)
 end
 
 local function shopRow(parent, order, icon, iconColor, title, description, buttonColor, onClick)
@@ -5427,8 +5639,8 @@ local function shopRow(parent, order, icon, iconColor, title, description, butto
 		Parent = parent,
 	}, {
 		corner(16),
-		stroke(BLACK, 2, 0.3),
-		gradient(Color3.fromRGB(66, 58, 104), Color3.fromRGB(44, 38, 72)),
+		stroke(BLACK, 3),
+		gradient(Color3.fromRGB(70, 70, 95), Color3.fromRGB(35, 35, 55)),
 	})
 	local iconFrame = create("Frame", {
 		Position = UDim2.fromOffset(10, 11),
@@ -5453,9 +5665,9 @@ local function shopRow(parent, order, icon, iconColor, title, description, butto
 		Size = UDim2.new(1, -250, 0, 24),
 		Text = description,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Color3.fromRGB(200, 195, 230),
+		TextColor3 = Color3.fromRGB(215, 215, 235),
 		Parent = row,
-	}, false)
+	}, 1)
 	local _, btn = fancyButton({
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -12, 0.5, -2),
@@ -5470,6 +5682,7 @@ end
 local function buildShop()
 	local content = makePanel("Shop", "🛒 Shop", Color3.fromRGB(60, 205, 95))
 	local scroll = scrolling(content)
+	refs.ShopScroll = scroll
 	create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = scroll })
 
 	local order = 0
@@ -5486,7 +5699,7 @@ local function buildShop()
 		request("BuyPedestal")
 	end)
 
-	sectionHeader(scroll, nextOrder(), "🚀 Boosts")
+	refs.BoostsHeader = sectionHeader(scroll, nextOrder(), "🚀 Boosts")
 	for _, key in PRODUCT_ORDER do
 		local product = Config.Products[key]
 		local row = shopRow(
@@ -5696,7 +5909,7 @@ local function buildOverlay()
 	refs.Toasts = scaled(create("Frame", {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 150),
+		Position = UDim2.new(0.5, 0, 0, 16),
 		Size = UDim2.fromOffset(560, 260),
 		BackgroundTransparency = 1,
 		Parent = gui,
@@ -6153,18 +6366,20 @@ end
 
 -- Floating "+$123" near the top bar
 function UI.FloatText(text, color, fromSpeed)
-	local yOffset = 40
+	-- Spawn next to the cash / speed counter on the left HUD (absolute screen position)
+	local anchor = refs.Money
 	if fromSpeed then
-		yOffset = 104
+		anchor = refs.Speed
 	end
+	local origin = anchor.AbsolutePosition + Vector2.new(anchor.AbsoluteSize.X * 0.6, anchor.AbsoluteSize.Y * 0.5)
 	local float = label({
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, math.random(-70, 70), 0, yOffset),
-		Size = UDim2.fromOffset(240, 40),
+		Position = UDim2.fromOffset(origin.X + math.random(-20, 40), origin.Y),
+		Size = UDim2.fromOffset(220, 38),
 		Text = text,
 		TextColor3 = color or WHITE,
 		ZIndex = 20,
-		Parent = refs.TopBar,
+		Parent = refs.Coins,
 	}, 3)
 	local s = create("UIScale", { Scale = 0.4, Parent = float })
 	TweenService:Create(s, TweenInfo.new(0.3, Enum.EasingStyle.Back), { Scale = 1 }):Play()
@@ -6174,7 +6389,7 @@ function UI.FloatText(text, color, fromSpeed)
 		TweenService:Create(outline, info, { Transparency = 1 }):Play()
 	end
 	local tween = TweenService:Create(float, info, {
-		Position = float.Position + UDim2.fromOffset(0, 70),
+		Position = float.Position - UDim2.fromOffset(0, 60),
 		TextTransparency = 1,
 	})
 	tween:Play()
@@ -6249,11 +6464,12 @@ function UI.Update(newState)
 	end
 	refs.Income.Text = incomeText
 
-	local speedText = "⚡ " .. state.Speed .. " Speed   +" .. state.PadRate .. "/s on pad"
+	refs.Speed.Text = state.Speed .. " Speed"
 	if state.Speed >= state.MaxSpeed then
-		speedText = "⚡ " .. state.Speed .. " Speed   MAX!"
+		refs.SpeedSub.Text = "MAX SPEED!"
+	else
+		refs.SpeedSub.Text = "+" .. state.PadRate .. "/s on your Speed Pad"
 	end
-	refs.Speed.Text = speedText
 	TweenService:Create(refs.SpeedFill, TWEEN_FAST, {
 		Size = UDim2.fromScale(math.clamp(state.Speed / state.MaxSpeed, 0.05, 1), 1),
 	}):Play()
@@ -6415,7 +6631,7 @@ return UI
 ]]></ProtectedString>
 						</Properties>
 					</Item>
-					<Item class="ModuleScript" referent="RBXE4EDB256A21A4732A3EF5680AB296060">
+					<Item class="ModuleScript" referent="RBXCC3085DCB0C74311AFB4B69EFB27C8B8">
 						<Properties>
 							<string name="Name">World</string>
 							<ProtectedString name="Source"><![CDATA[-- World: client-side life for the 3D world.
@@ -6561,7 +6777,7 @@ local function updateWarning(part, now)
 	local state = warnings[part]
 	if not state then
 		local gui = Instance.new("BillboardGui")
-		gui.Size = UDim2.new(6, 0, 3, 0)
+		gui.Size = UDim2.fromOffset(70, 56)
 		gui.StudsOffsetWorldSpace = Vector3.new(0, 4, 0)
 		gui.AlwaysOnTop = true
 		gui.LightInfluence = 0
@@ -6682,7 +6898,7 @@ return World
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="LocalScript" referent="RBXA8C767A3D06E4E7285337031C22D1F25">
+				<Item class="LocalScript" referent="RBX05D758093BDC464B85EAD18B3D6A17E9">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Steal a Meteor: client entry point.
@@ -6720,19 +6936,19 @@ end)
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX096A1AF852E24CA183AE9E1F8B72B6C0">
+	<Item class="Workspace" referent="RBXB5D1668374314455AD17C496B54F4FE3">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="FilteringEnabled">true</bool>
 		</Properties>
 	</Item>
-	<Item class="SoundService" referent="RBXE5DDDF78957045BAB3E5CCE0945FA465">
+	<Item class="SoundService" referent="RBX3D70500048A84967B4C81EF6BE50E36D">
 		<Properties>
 			<string name="Name">SoundService</string>
 			<bool name="RespectFilteringEnabled">true</bool>
 		</Properties>
 	</Item>
-	<Item class="Lighting" referent="RBXED7947E11E194BF9B877A125AC13342D">
+	<Item class="Lighting" referent="RBX906D89EDD9044ED6860D65E99379CB2C">
 		<Properties>
 			<string name="Name">Lighting</string>
 			<token name="Technology">4</token>

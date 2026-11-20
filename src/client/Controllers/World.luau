@@ -141,7 +141,7 @@ local function updateWarning(part, now)
 	local state = warnings[part]
 	if not state then
 		local gui = Instance.new("BillboardGui")
-		gui.Size = UDim2.new(6, 0, 3, 0)
+		gui.Size = UDim2.fromOffset(70, 56)
 		gui.StudsOffsetWorldSpace = Vector3.new(0, 4, 0)
 		gui.AlwaysOnTop = true
 		gui.LightInfluence = 0
