@@ -1,13 +1,13 @@
 <roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
-	<Item class="ReplicatedStorage" referent="RBXD6985506253043C8A36926B496485601">
+	<Item class="ReplicatedStorage" referent="RBXADFF82EE2BEE4684845BEC7B4BCBF0EF">
 		<Properties>
 			<string name="Name">ReplicatedStorage</string>
 		</Properties>
-		<Item class="Folder" referent="RBX60C48289207D4475868B3F18E69D8225">
+		<Item class="Folder" referent="RBXA8189C6499EC41AEB7ED8C1AC2DC0BEB">
 			<Properties>
 				<string name="Name">Shared</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX29E8038D8D0E4C98BBE6E32403CF178C">
+			<Item class="ModuleScript" referent="RBX54E17C247E2048149EEB529194272457">
 				<Properties>
 					<string name="Name">Config</string>
 					<ProtectedString name="Source"><![CDATA[-- Config: every balance number for Steal a Meteor lives here.
@@ -247,7 +247,7 @@ return Config
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBXC3556A4096DD429FB10AA70B8E4018CE">
+			<Item class="ModuleScript" referent="RBX8905A10B39C04B8DAAE81A868807BAA1">
 				<Properties>
 					<string name="Name">Remotes</string>
 					<ProtectedString name="Source"><![CDATA[-- Creates (server) or waits for (client) every remote the game uses.
@@ -308,7 +308,7 @@ return Remotes
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX77157DB0B66D4E6EB447044BBFC10243">
+			<Item class="ModuleScript" referent="RBX830B2EFFC8C64A20B8BA9A6084D60D8B">
 				<Properties>
 					<string name="Name">Util</string>
 					<ProtectedString name="Source"><![CDATA[-- Small helpers shared by server and client.
@@ -444,17 +444,646 @@ return Util
 ]]></ProtectedString>
 				</Properties>
 			</Item>
+			<Item class="ModuleScript" referent="RBX650ED763DCF548BE9AD8A87F8C1D8F8B">
+				<Properties>
+					<string name="Name">Visuals</string>
+					<ProtectedString name="Source"><![CDATA[-- Visuals: builds every model in code (meteors, Meteorlings, hammer, warning circles).
+-- Shared so the client can render the same models inside ViewportFrames (Index, hatch popup).
+
+local CollectionService = game:GetService("CollectionService")
+
+local Config = require(script.Parent.Config)
+local Util = require(script.Parent.Util)
+
+local Visuals = {}
+
+local FONT = Enum.Font.FredokaOne
+local WHITE = Color3.new(1, 1, 1)
+
+local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
+local FIRE = "rbxasset://textures/particles/fire_main.dds"
+
+local function make(className, props, parent)
+	local inst = Instance.new(className)
+	for key, value in props do
+		inst[key] = value
+	end
+	if parent then
+		inst.Parent = parent
+	end
+	return inst
+end
+Visuals.Make = make
+
+-- A part welded to the root. The CFrame is set BEFORE welding:
+-- setting CFrame on an already welded part would move the whole assembly.
+local function attachedPart(root, props, cframe)
+	local part = make("Part", props)
+	part.Anchored = false
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CanQuery = false
+	part.Massless = true
+	part.CastShadow = props.CastShadow ~= false
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	part.CFrame = cframe
+	part.Parent = root.Parent
+	make("WeldConstraint", { Part0 = root, Part1 = part }, part)
+	return part
+end
+
+local function ball(root, size, color, material, cframe, extra)
+	local props = {
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(size, size, size),
+		Color = color,
+		Material = material or Enum.Material.SmoothPlastic,
+	}
+	if extra then
+		for key, value in extra do
+			props[key] = value
+		end
+	end
+	return attachedPart(root, props, cframe)
+end
+
+local function newRoot(model, props)
+	local root = make("Part", props)
+	root.Name = "Root"
+	root.Anchored = true
+	root.CanCollide = false
+	root.CanTouch = false
+	root.CanQuery = true
+	root.TopSurface = Enum.SurfaceType.Smooth
+	root.BottomSurface = Enum.SurfaceType.Smooth
+	root.Parent = model
+	model.PrimaryPart = root
+	return root
+end
+
+local function label(parent, props)
+	local lbl = make("TextLabel", {
+		BackgroundTransparency = 1,
+		Font = FONT,
+		TextScaled = true,
+		TextColor3 = WHITE,
+		TextStrokeTransparency = 0,
+		TextStrokeColor3 = Color3.new(0, 0, 0),
+	})
+	for key, value in props do
+		lbl[key] = value
+	end
+	lbl.Parent = parent
+	return lbl
+end
+Visuals.Label = label
+
+local function sparkles(parent, color, rate, size)
+	return make("ParticleEmitter", {
+		Name = "Sparkles",
+		Color = ColorSequence.new(color),
+		LightEmission = 1,
+		LightInfluence = 0,
+		Rate = rate,
+		Lifetime = NumberRange.new(0.8, 1.6),
+		Speed = NumberRange.new(1, 3),
+		SpreadAngle = Vector2.new(180, 180),
+		Acceleration = Vector3.new(0, 2, 0),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size), NumberSequenceKeypoint.new(1, 0) }),
+		Transparency = NumberSequence.new(0, 0.4),
+		Texture = SPARKLE,
+	}, parent)
+end
+
+local function addMutationLook(model, root, item, plain)
+	if not item.mut then
+		return
+	end
+	local mutation = Config.MutationByName[item.mut]
+	if not mutation then
+		return
+	end
+	if plain then
+		return
+	end
+	make("Highlight", {
+		FillColor = mutation.Color,
+		FillTransparency = 0.6,
+		OutlineColor = mutation.Color,
+		OutlineTransparency = 0,
+		DepthMode = Enum.HighlightDepthMode.Occluded,
+	}, model)
+	sparkles(root, mutation.Color, 14, 0.6)
+end
+
+-- Billboard above an item: name, rarity, mutation, income or hatch timer.
+local function itemBillboard(root, item, height, showIncome)
+	local info = Config.MeteorlingById[item.id]
+	local rarity = Util.GetRarity(info.Rarity)
+
+	local gui = make("BillboardGui", {
+		Name = "ItemGui",
+		Size = UDim2.new(8, 0, 3.4, 0),
+		StudsOffsetWorldSpace = Vector3.new(0, height / 2 + 2.4, 0),
+		MaxDistance = 120,
+		LightInfluence = 0,
+	}, root)
+
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Vertical,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		VerticalAlignment = Enum.VerticalAlignment.Bottom,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0.02, 0),
+	}, gui)
+
+	if item.mut then
+		local mutation = Config.MutationByName[item.mut]
+		label(gui, {
+			Name = "Mutation",
+			LayoutOrder = 1,
+			Size = UDim2.new(1, 0, 0.22, 0),
+			Text = "✦ " .. string.upper(item.mut) .. " x" .. tostring(mutation and mutation.Mult or 1) .. " ✦",
+			TextColor3 = mutation and mutation.Color or WHITE,
+		})
+	end
+
+	local nameText = item.id
+	if not item.hatched then
+		nameText = rarity.Name .. " Meteor"
+	end
+	label(gui, {
+		Name = "Title",
+		LayoutOrder = 2,
+		Size = UDim2.new(1, 0, 0.3, 0),
+		Text = nameText,
+	})
+
+	local rarityLabel = label(gui, {
+		Name = "Rarity",
+		LayoutOrder = 3,
+		Size = UDim2.new(1, 0, 0.22, 0),
+		Text = rarity.Name,
+		TextColor3 = rarity.Color,
+	})
+	if rarity.Name == "Secret" then
+		rarityLabel.TextColor3 = WHITE
+		rarityLabel.TextStrokeColor3 = Color3.fromRGB(255, 0, 200)
+	end
+
+	if showIncome then
+		if item.hatched then
+			label(gui, {
+				Name = "Income",
+				LayoutOrder = 4,
+				Size = UDim2.new(1, 0, 0.26, 0),
+				Text = Util.FormatMoney(Util.ItemIncome(item)) .. "/s",
+				TextColor3 = Color3.fromRGB(120, 255, 120),
+			})
+		elseif item.hatchAt then
+			local timer = label(gui, {
+				Name = "Timer",
+				LayoutOrder = 4,
+				Size = UDim2.new(1, 0, 0.26, 0),
+				Text = "Hatching...",
+				TextColor3 = Color3.fromRGB(255, 230, 120),
+			})
+			timer:SetAttribute("HatchAt", item.hatchAt)
+			CollectionService:AddTag(timer, "HatchTimer")
+		end
+	end
+	return gui
+end
+
+-- Meteor -----------------------------------------------------------------------
+
+-- An unhatched meteor: a molten glowing core showing through cracks in a rocky shell.
+-- plain = true builds only the parts (for ViewportFrames).
+function Visuals.MeteorModel(item, showIncome, plain)
+	local info = Config.MeteorlingById[item.id]
+	local rarity = Util.GetRarity(info.Rarity)
+	local size = rarity.Size
+
+	local model = Instance.new("Model")
+	model.Name = "Meteor"
+	local root = newRoot(model, {
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(size * 0.82, size * 0.82, size * 0.82),
+		Material = Enum.Material.Neon,
+		Color = rarity.Color,
+		CastShadow = false,
+	})
+
+	-- Rock plates: big enough to cover most of the core, gaps leak light
+	local rng = Random.new(#item.id * 31 + math.floor(size * 10))
+	local rockColor = Color3.fromRGB(48, 42, 44)
+	local directions = {
+		Vector3.new(1, 0, 0),
+		Vector3.new(-1, 0, 0),
+		Vector3.new(0, 1, 0),
+		Vector3.new(0, -1, 0),
+		Vector3.new(0, 0, 1),
+		Vector3.new(0, 0, -1),
+		Vector3.new(0.7, 0.7, 0),
+		Vector3.new(-0.7, 0.7, 0),
+		Vector3.new(0, 0.7, 0.7),
+		Vector3.new(0, -0.7, -0.7),
+		Vector3.new(0.7, -0.7, 0),
+		Vector3.new(-0.7, 0, 0.7),
+	}
+	for i, direction in directions do
+		local dir = direction.Unit
+		local plate = Vector3.new(size * rng:NextNumber(0.42, 0.55), size * 0.18, size * rng:NextNumber(0.42, 0.55))
+		local position = dir * size * 0.36
+		local up = Vector3.new(0, 1, 0)
+		if math.abs(dir.Y) > 0.9 then
+			up = Vector3.new(1, 0, 0)
+		end
+		local cf = CFrame.lookAt(position, position + dir, up) * CFrame.Angles(math.rad(90), rng:NextNumber(0, math.pi), 0)
+		attachedPart(root, {
+			Name = "Rock" .. i,
+			Size = plate,
+			Material = Enum.Material.Basalt,
+			Color = rockColor:Lerp(rarity.Color, 0.08),
+		}, cf)
+	end
+
+	if not plain then
+		make("PointLight", {
+			Color = rarity.Color,
+			Range = math.min(40, size * 4),
+			Brightness = 3,
+			Shadows = false,
+		}, root)
+		make("ParticleEmitter", {
+			Name = "Embers",
+			Color = ColorSequence.new(rarity.Color, Color3.fromRGB(255, 150, 60)),
+			LightEmission = 1,
+			LightInfluence = 0,
+			Rate = 5 + Config.RarityIndex[rarity.Name] * 2,
+			Lifetime = NumberRange.new(0.8, 1.6),
+			Speed = NumberRange.new(1, 3),
+			SpreadAngle = Vector2.new(60, 60),
+			Acceleration = Vector3.new(0, 6, 0),
+			EmissionDirection = Enum.NormalId.Top,
+			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.12), NumberSequenceKeypoint.new(1, 0) }),
+			Texture = SPARKLE,
+		}, root)
+		make("ParticleEmitter", {
+			Name = "Heat",
+			Color = ColorSequence.new(rarity.Color),
+			LightEmission = 0.8,
+			LightInfluence = 0,
+			Rate = 4,
+			Lifetime = NumberRange.new(0.6, 1),
+			Speed = NumberRange.new(0.5, 1),
+			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.9), NumberSequenceKeypoint.new(1, size * 1.4) }),
+			Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.85),
+				NumberSequenceKeypoint.new(1, 1),
+			}),
+			Texture = FIRE,
+			ZOffset = -1,
+		}, root)
+		if rarity.Name == "Secret" or rarity.Name == "Cosmic" then
+			make("Highlight", {
+				FillTransparency = 1,
+				OutlineColor = rarity.Name == "Secret" and WHITE or rarity.Color,
+				DepthMode = Enum.HighlightDepthMode.Occluded,
+			}, model)
+		end
+		addMutationLook(model, root, item, plain)
+		itemBillboard(root, item, size, showIncome)
+		CollectionService:AddTag(root, "Spin")
+	end
+	return model
+end
+
+-- Meteorlings ------------------------------------------------------------------
+
+local FEATURES = {}
+
+function FEATURES.Ears(root, s, color, accent)
+	for _, side in { -1, 1 } do
+		local ear = attachedPart(root, {
+			Size = Vector3.new(0.55 * s, 1.15 * s, 0.4 * s),
+			Color = color,
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(side * 0.72 * s, 1.55 * s, 0.1 * s) * CFrame.Angles(0, 0, -side * 0.35))
+		attachedPart(root, {
+			Size = Vector3.new(0.3 * s, 0.75 * s, 0.1 * s),
+			Color = accent,
+			Material = Enum.Material.Neon,
+			CastShadow = false,
+		}, ear.CFrame * CFrame.new(0, -0.05 * s, -0.2 * s))
+	end
+end
+
+function FEATURES.Horns(root, s, _color, accent)
+	for _, side in { -1, 1 } do
+		local base = attachedPart(root, {
+			Size = Vector3.new(0.42 * s, 0.6 * s, 0.42 * s),
+			Color = accent,
+			Material = Enum.Material.Neon,
+			CastShadow = false,
+		}, root.CFrame * CFrame.new(side * 0.6 * s, 1.35 * s, -0.25 * s) * CFrame.Angles(-0.25, 0, -side * 0.45))
+		attachedPart(root, {
+			Size = Vector3.new(0.26 * s, 0.6 * s, 0.26 * s),
+			Color = accent:Lerp(WHITE, 0.4),
+			Material = Enum.Material.Neon,
+			CastShadow = false,
+		}, base.CFrame * CFrame.new(0, 0.5 * s, 0) * CFrame.Angles(0, 0, -side * 0.35))
+	end
+end
+
+function FEATURES.Wings(root, s, color, accent)
+	for _, side in { -1, 1 } do
+		local wing = attachedPart(root, {
+			Size = Vector3.new(2 * s, 0.12 * s, 1.2 * s),
+			Color = accent,
+			Material = Enum.Material.Neon,
+			Transparency = 0.25,
+			CastShadow = false,
+		}, root.CFrame * CFrame.new(side * 1.9 * s, 0.45 * s, 0.45 * s) * CFrame.Angles(0.15, side * 0.25, side * 0.5))
+		attachedPart(root, {
+			Size = Vector3.new(1.6 * s, 0.2 * s, 0.35 * s),
+			Color = color,
+			Material = Enum.Material.SmoothPlastic,
+		}, wing.CFrame * CFrame.new(0, 0.05 * s, -0.5 * s))
+	end
+end
+
+function FEATURES.Antenna(root, s, _color, accent)
+	for _, side in { -1, 1 } do
+		local stalk = attachedPart(root, {
+			Size = Vector3.new(0.12 * s, 1.1 * s, 0.12 * s),
+			Color = Color3.fromRGB(40, 40, 50),
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(side * 0.45 * s, 1.75 * s, 0) * CFrame.Angles(0, 0, -side * 0.3))
+		ball(root, 0.5 * s, accent, Enum.Material.Neon, stalk.CFrame * CFrame.new(0, 0.6 * s, 0), { CastShadow = false })
+	end
+end
+
+function FEATURES.Crown(root, s)
+	local gold = Color3.fromRGB(255, 205, 50)
+	attachedPart(root, {
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.35 * s, 1.5 * s, 1.5 * s),
+		Color = gold,
+		Material = Enum.Material.Metal,
+		Reflectance = 0.2,
+	}, root.CFrame * CFrame.new(0, 1.45 * s, 0) * CFrame.Angles(0, 0, math.rad(90)))
+	for i = 0, 4 do
+		local angle = (i / 5) * math.pi * 2
+		local spike = CFrame.new(math.cos(angle) * 0.6 * s, 1.85 * s, math.sin(angle) * 0.6 * s)
+		attachedPart(root, {
+			Size = Vector3.new(0.22 * s, 0.6 * s, 0.22 * s),
+			Color = gold,
+			Material = Enum.Material.Metal,
+			Reflectance = 0.2,
+		}, root.CFrame * spike * CFrame.Angles(0, -angle, 0))
+		ball(root, 0.2 * s, Color3.fromRGB(255, 80, 120), Enum.Material.Neon, root.CFrame * spike * CFrame.new(0, 0.35 * s, 0), {
+			CastShadow = false,
+		})
+	end
+end
+
+function FEATURES.Fins(root, s, color, accent)
+	attachedPart(root, {
+		Size = Vector3.new(0.2 * s, 1.2 * s, 1.3 * s),
+		Color = accent,
+		Material = Enum.Material.Neon,
+		CastShadow = false,
+	}, root.CFrame * CFrame.new(0, 1.45 * s, 0.35 * s) * CFrame.Angles(0.5, 0, 0))
+	attachedPart(root, {
+		Size = Vector3.new(2 * s, 0.22 * s, 1 * s),
+		Color = color,
+		Material = Enum.Material.SmoothPlastic,
+	}, root.CFrame * CFrame.new(0, 0.25 * s, 1.75 * s) * CFrame.Angles(0.25, 0, 0))
+end
+
+-- A hatched Meteorling: round glossy body, big shiny eyes, blush, feet, a signature feature.
+function Visuals.CreatureModel(item, showIncome, plain)
+	local info = Config.MeteorlingById[item.id]
+	local rarity = Util.GetRarity(info.Rarity)
+	local rarityIndex = Config.RarityIndex[info.Rarity]
+	local s = 0.85 + rarityIndex * 0.17
+	local bodySize = 3 * s
+	local bodyColor = info.Color
+
+	local model = Instance.new("Model")
+	model.Name = "Meteorling"
+	local root = newRoot(model, {
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(bodySize, bodySize, bodySize),
+		Material = Enum.Material.SmoothPlastic,
+		Color = bodyColor,
+		Reflectance = 0.05,
+	})
+
+	-- Belly
+	ball(root, 1.7 * s, bodyColor:Lerp(WHITE, 0.4), nil, root.CFrame * CFrame.new(0, -0.5 * s, -0.62 * s))
+
+	-- Eyes
+	for _, side in { -1, 1 } do
+		local eye = ball(root, 0.95 * s, WHITE, nil, root.CFrame * CFrame.new(side * 0.55 * s, 0.38 * s, -1.18 * s))
+		local pupil = ball(root, 0.55 * s, Color3.fromRGB(20, 18, 30), nil, eye.CFrame * CFrame.new(0, -0.03 * s, -0.27 * s))
+		ball(root, 0.2 * s, WHITE, Enum.Material.Neon, pupil.CFrame * CFrame.new(0.12 * s, 0.13 * s, -0.2 * s), {
+			CastShadow = false,
+		})
+		-- Blush
+		ball(root, 0.42 * s, Color3.fromRGB(255, 120, 150), nil, root.CFrame * CFrame.new(side * 0.95 * s, -0.12 * s, -1.08 * s), {
+			Transparency = 0.35,
+			CastShadow = false,
+		})
+		-- Feet
+		attachedPart(root, {
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.5 * s, 0.9 * s, 0.9 * s),
+			Color = bodyColor:Lerp(Color3.new(0, 0, 0), 0.25),
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(side * 0.6 * s, -1.35 * s, -0.35 * s) * CFrame.Angles(0, 0, math.rad(90)))
+		-- Little arms
+		ball(root, 0.6 * s, bodyColor:Lerp(Color3.new(0, 0, 0), 0.1), nil, root.CFrame * CFrame.new(side * 1.4 * s, -0.35 * s, -0.4 * s))
+	end
+
+	-- Mouth
+	attachedPart(root, {
+		Size = Vector3.new(0.45 * s, 0.14 * s, 0.1 * s),
+		Color = Color3.fromRGB(70, 20, 40),
+		Material = Enum.Material.SmoothPlastic,
+	}, root.CFrame * CFrame.new(0, -0.18 * s, -1.47 * s) * CFrame.Angles(-0.25, 0, 0))
+
+	local feature = FEATURES[info.Feature]
+	if feature then
+		feature(root, s, bodyColor, rarity.Color)
+	end
+
+	if not plain then
+		if rarityIndex >= 4 then
+			-- Magic aura bubble
+			ball(root, bodySize * 1.25, rarity.Color, Enum.Material.ForceField, root.CFrame, { CastShadow = false })
+		end
+		if rarityIndex >= 5 then
+			make("PointLight", { Color = rarity.Color, Range = 12 + rarityIndex * 2, Brightness = 1.5 }, root)
+		end
+		if rarityIndex >= 6 then
+			sparkles(root, rarity.Color, 8, 0.45)
+		end
+		addMutationLook(model, root, item, plain)
+		itemBillboard(root, item, bodySize + 1.5 * s, showIncome)
+	end
+	return model
+end
+
+function Visuals.ItemModel(item, showIncome, plain)
+	if item.hatched then
+		return Visuals.CreatureModel(item, showIncome, plain)
+	end
+	return Visuals.MeteorModel(item, showIncome, plain)
+end
+
+-- Effects ------------------------------------------------------------------------
+
+-- Impact target: red ring + inner disc that the client shrinks as a countdown.
+function Visuals.WarningCircle(diameter, color)
+	local circle = make("Part", {
+		Name = "ImpactWarning",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.25, diameter, diameter),
+		Material = Enum.Material.Neon,
+		Color = Color3.fromRGB(255, 40, 40),
+		Transparency = 0.45,
+		Anchored = true,
+		CanCollide = false,
+		CanTouch = false,
+		CanQuery = false,
+		CastShadow = false,
+	})
+	local inner = make("Part", {
+		Name = "Inner",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.3, diameter, diameter),
+		Material = Enum.Material.Neon,
+		Color = color,
+		Transparency = 0.2,
+		Anchored = true,
+		CanCollide = false,
+		CanTouch = false,
+		CanQuery = false,
+		CastShadow = false,
+	}, circle)
+	make("PointLight", { Color = Color3.fromRGB(255, 60, 60), Range = diameter, Brightness = 2 }, circle)
+	return circle, inner
+end
+
+-- Tall light beam marking a special meteor (Golden Comet).
+function Visuals.Beacon(position, color)
+	local beacon = make("Part", {
+		Name = "Beacon",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(600, 4, 4),
+		CFrame = CFrame.new(position + Vector3.new(0, 300, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Material = Enum.Material.Neon,
+		Color = color,
+		Transparency = 0.4,
+		Anchored = true,
+		CanCollide = false,
+		CanTouch = false,
+		CanQuery = false,
+		CastShadow = false,
+	})
+	make("ParticleEmitter", {
+		Color = ColorSequence.new(color),
+		LightEmission = 1,
+		Rate = 40,
+		Lifetime = NumberRange.new(2, 3),
+		Speed = NumberRange.new(0, 0),
+		Size = NumberSequence.new(1.2, 0),
+		Texture = SPARKLE,
+		EmissionDirection = Enum.NormalId.Right,
+	}, beacon)
+	return beacon
+end
+
+function Visuals.HammerTool(big)
+	local tool = Instance.new("Tool")
+	tool.Name = "Hammer"
+	tool.ToolTip = "Bonk players to make them drop what they carry!"
+	tool.CanBeDropped = false
+	tool.RequiresHandle = true
+	tool.Grip = CFrame.new(0, -1.2, 0)
+
+	local scale = 1
+	local headColor = Color3.fromRGB(255, 120, 40)
+	if big then
+		scale = 1.5
+		headColor = Color3.fromRGB(255, 210, 40)
+	end
+
+	local handle = make("Part", {
+		Name = "Handle",
+		Size = Vector3.new(0.45, 4 * scale, 0.45),
+		Material = Enum.Material.Wood,
+		Color = Color3.fromRGB(110, 70, 40),
+		CanCollide = false,
+		Massless = true,
+	}, tool)
+
+	local function piece(props, offset)
+		local p = make("Part", props)
+		p.CanCollide = false
+		p.Massless = true
+		p.CFrame = handle.CFrame * offset
+		p.Parent = tool
+		make("WeldConstraint", { Part0 = handle, Part1 = p }, p)
+		return p
+	end
+
+	piece({
+		Name = "Head",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(2.6 * scale, 1.5 * scale, 1.5 * scale),
+		Material = Enum.Material.SmoothPlastic,
+		Color = headColor,
+	}, CFrame.new(0, 2 * scale, 0))
+	for _, side in { -1, 1 } do
+		piece({
+			Name = "Band",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.25 * scale, 1.6 * scale, 1.6 * scale),
+			Material = Enum.Material.Neon,
+			Color = Color3.fromRGB(255, 240, 200),
+		}, CFrame.new(side * 1.05 * scale, 2 * scale, 0))
+	end
+	piece({
+		Name = "Grip",
+		Size = Vector3.new(0.55, 1.2 * scale, 0.55),
+		Material = Enum.Material.Fabric,
+		Color = Color3.fromRGB(40, 40, 50),
+	}, CFrame.new(0, -1.3 * scale, 0))
+
+	make("Sound", { Name = "Swing", SoundId = "rbxasset://sounds/swordslash.wav", Volume = 0.6 }, handle)
+	make("Sound", { Name = "Hit", SoundId = "rbxasset://sounds/hit.wav", Volume = 0.9 }, handle)
+	return tool
+end
+
+return Visuals
+]]></ProtectedString>
+				</Properties>
+			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX19339CC9B9FF4ECBA69E06ED48DFF04D">
+	<Item class="ServerScriptService" referent="RBXBF3116EC2C1B4D14B34155589D8B31D6">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX40BF6C1AA8CA405FA3B7BD08A2B60D6F">
+		<Item class="Folder" referent="RBXB4FDA1663ED04C4B9734A9E11C12ACFD">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="Script" referent="RBX39182BFBAB2E42C1972A203904C082C4">
+			<Item class="Script" referent="RBX36596FF7C07040B6B6BE721400B6E648">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Steal a Meteor: server entry point.
@@ -567,18 +1196,19 @@ end)
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Folder" referent="RBX893C997A4E4C47E695E78486A2593F18">
+			<Item class="Folder" referent="RBX764E6660AAD747DC8A0515B7FB9E4522">
 				<Properties>
 					<string name="Name">Modules</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX7D8C3582AA88470C8CF16538057B4D74">
+				<Item class="ModuleScript" referent="RBX7DF0FCB7783746A7B8138BAE53F1002E">
 					<Properties>
 						<string name="Name">MapBuilder</string>
-						<ProtectedString name="Source"><![CDATA[-- MapBuilder: generates the whole map in code, so the place works from an empty baseplate.
+						<ProtectedString name="Source"><![CDATA[-- MapBuilder: generates the whole world in code (terrain, sky, bases, zones, decor),
+-- so the place works from an empty file.
 -- Layout (top view, +Z goes "forward"):
 --   z = -75..-5   : row of player bases (plots)
---   z =  -5..62   : hub with the spawn
---   z =  62..800  : meteor zones, each further one behind a speed gate
+--   z =  -5..62   : hub with the spawn and the road
+--   z =  62..820  : meteor zones, each further one behind a speed gate
 
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -590,15 +1220,18 @@ local MapBuilder = {}
 
 local FONT = Enum.Font.FredokaOne
 local W = Config.MapHalfWidth
+local terrain = workspace.Terrain
 
 local PLOT_COLORS = {
-	Color3.fromRGB(255, 120, 120),
-	Color3.fromRGB(255, 190, 90),
-	Color3.fromRGB(120, 220, 120),
-	Color3.fromRGB(100, 180, 255),
-	Color3.fromRGB(190, 130, 255),
-	Color3.fromRGB(255, 130, 210),
+	Color3.fromRGB(255, 110, 120),
+	Color3.fromRGB(255, 185, 80),
+	Color3.fromRGB(110, 225, 120),
+	Color3.fromRGB(90, 180, 255),
+	Color3.fromRGB(185, 120, 255),
+	Color3.fromRGB(255, 125, 210),
 }
+
+-- Helpers -------------------------------------------------------------------------
 
 local function part(props, parent)
 	local p = Instance.new("Part")
@@ -612,7 +1245,24 @@ local function part(props, parent)
 	return p
 end
 
-local function billboard(parent, text, size, offset, color, maxDistance)
+local function deco(props, parent)
+	-- Decoration that never blocks raycasts or touches
+	props.CanQuery = false
+	props.CanTouch = false
+	return part(props, parent)
+end
+
+local function light(parent, color, range, brightness)
+	local l = Instance.new("PointLight")
+	l.Color = color
+	l.Range = range
+	l.Brightness = brightness or 1.5
+	l.Shadows = false
+	l.Parent = parent
+	return l
+end
+
+local function billboard(parent, text, size, offset, color, maxDistance, strokeColor)
 	local gui = Instance.new("BillboardGui")
 	gui.Size = size
 	gui.StudsOffsetWorldSpace = offset
@@ -628,6 +1278,7 @@ local function billboard(parent, text, size, offset, color, maxDistance)
 	lbl.Text = text
 	lbl.TextColor3 = color or Color3.new(1, 1, 1)
 	lbl.TextStrokeTransparency = 0
+	lbl.TextStrokeColor3 = strokeColor or Color3.new(0, 0, 0)
 	lbl.Parent = gui
 	return gui, lbl
 end
@@ -642,55 +1293,238 @@ local function flatCylinder(props, parent)
 	return p
 end
 
-local function setupLighting()
-	Lighting.ClockTime = 17.6
-	Lighting.Brightness = 2.2
-	Lighting.Ambient = Color3.fromRGB(70, 60, 90)
-	Lighting.OutdoorAmbient = Color3.fromRGB(120, 110, 150)
-	Lighting.EnvironmentDiffuseScale = 0.5
-	Lighting.EnvironmentSpecularScale = 0.5
-
-	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
-	atmosphere.Density = 0.32
-	atmosphere.Offset = 0.2
-	atmosphere.Color = Color3.fromRGB(200, 170, 255)
-	atmosphere.Decay = Color3.fromRGB(110, 80, 160)
-	atmosphere.Glare = 0.3
-	atmosphere.Haze = 1.2
-	atmosphere.Parent = Lighting
-
-	local bloom = Lighting:FindFirstChildOfClass("BloomEffect") or Instance.new("BloomEffect")
-	bloom.Intensity = 0.8
-	bloom.Size = 30
-	bloom.Threshold = 0.9
-	bloom.Parent = Lighting
-
-	local color = Lighting:FindFirstChildOfClass("ColorCorrectionEffect") or Instance.new("ColorCorrectionEffect")
-	color.Saturation = 0.15
-	color.Contrast = 0.08
-	color.Parent = Lighting
+local function sparkleEmitter(parent, color, rate, size, speed)
+	local e = Instance.new("ParticleEmitter")
+	e.Color = ColorSequence.new(color)
+	e.LightEmission = 1
+	e.LightInfluence = 0
+	e.Rate = rate
+	e.Lifetime = NumberRange.new(1, 2)
+	e.Speed = NumberRange.new(speed or 2, (speed or 2) * 2)
+	e.SpreadAngle = Vector2.new(25, 25)
+	e.EmissionDirection = Enum.NormalId.Top
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size), NumberSequenceKeypoint.new(1, 0) })
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Parent = parent
+	return e
 end
+
+-- Sky, light, terrain --------------------------------------------------------------
+
+local function setupLighting()
+	-- Night sky: meteors and neon glow look best in the dark
+	Lighting.ClockTime = 20.3
+	Lighting.GeographicLatitude = 35
+	Lighting.Brightness = 2.6
+	Lighting.Ambient = Color3.fromRGB(85, 75, 125)
+	Lighting.OutdoorAmbient = Color3.fromRGB(130, 120, 185)
+	Lighting.ExposureCompensation = 0.35
+	Lighting.EnvironmentDiffuseScale = 0.6
+	Lighting.EnvironmentSpecularScale = 0.8
+	Lighting.GlobalShadows = true
+	Lighting.ShadowSoftness = 0.25
+
+	local function effect(className)
+		local existing = Lighting:FindFirstChildOfClass(className)
+		if existing then
+			return existing
+		end
+		local inst = Instance.new(className)
+		inst.Parent = Lighting
+		return inst
+	end
+
+	local sky = effect("Sky")
+	sky.StarCount = 4000
+	sky.CelestialBodiesShown = true
+	sky.MoonAngularSize = 16
+	sky.SunAngularSize = 12
+
+	local atmosphere = effect("Atmosphere")
+	atmosphere.Density = 0.33
+	atmosphere.Offset = 0.15
+	atmosphere.Color = Color3.fromRGB(190, 160, 255)
+	atmosphere.Decay = Color3.fromRGB(95, 60, 170)
+	atmosphere.Glare = 0.6
+	atmosphere.Haze = 1.6
+
+	local bloom = effect("BloomEffect")
+	bloom.Intensity = 1
+	bloom.Size = 36
+	bloom.Threshold = 0.85
+
+	local rays = effect("SunRaysEffect")
+	rays.Intensity = 0.04
+	rays.Spread = 0.6
+
+	local color = effect("ColorCorrectionEffect")
+	color.Saturation = 0.22
+	color.Contrast = 0.12
+	color.Brightness = 0.02
+	color.TintColor = Color3.fromRGB(255, 248, 255)
+
+	local depth = effect("DepthOfFieldEffect")
+	depth.FarIntensity = 0.12
+	depth.FocusDistance = 120
+	depth.InFocusRadius = 140
+	depth.NearIntensity = 0
+
+	local clouds = terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+	clouds.Cover = 0.5
+	clouds.Density = 0.55
+	clouds.Color = Color3.fromRGB(200, 180, 255)
+	clouds.Parent = terrain
+end
+
+local function fill(x0, x1, z0, z1, material, depth)
+	depth = depth or 12
+	terrain:FillBlock(
+		CFrame.new((x0 + x1) / 2, -depth / 2, (z0 + z1) / 2),
+		Vector3.new(math.abs(x1 - x0), depth, math.abs(z1 - z0)),
+		material
+	)
+end
+
+local function setupTerrainColors()
+	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(78, 150, 72))
+	terrain:SetMaterialColor(Enum.Material.Sand, Color3.fromRGB(215, 175, 115))
+	terrain:SetMaterialColor(Enum.Material.Basalt, Color3.fromRGB(52, 44, 46))
+	terrain:SetMaterialColor(Enum.Material.CrackedLava, Color3.fromRGB(255, 110, 30))
+	terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(48, 32, 86))
+	terrain:SetMaterialColor(Enum.Material.Concrete, Color3.fromRGB(78, 80, 104))
+	terrain:SetMaterialColor(Enum.Material.Asphalt, Color3.fromRGB(52, 54, 70))
+	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(88, 80, 104))
+	terrain:SetMaterialColor(Enum.Material.Snow, Color3.fromRGB(225, 225, 255))
+end
+
+-- Ring of mountains around the playfield so the horizon is not empty
+local function buildMountains(backZ, farZ)
+	local rng = Random.new(77)
+	local function mountain(position, radius)
+		terrain:FillBall(position, radius, Enum.Material.Rock)
+		if radius > 55 then
+			terrain:FillBall(position + Vector3.new(0, radius * 0.75, 0), radius * 0.32, Enum.Material.Snow)
+		end
+	end
+	-- Centers are pushed out by the radius so terrain never covers the playfield
+	for z = backZ - 40, farZ + 40, 55 do
+		for _, side in { -1, 1 } do
+			local radius = rng:NextNumber(45, 85)
+			mountain(Vector3.new(side * (W + radius + rng:NextNumber(4, 20)), rng:NextNumber(-20, 10), z), radius)
+		end
+	end
+	for x = -W - 60, W + 60, 55 do
+		local radius = rng:NextNumber(50, 90)
+		mountain(Vector3.new(x, rng:NextNumber(-20, 10), farZ + radius + 4), radius)
+		local backRadius = radius * 0.8
+		mountain(Vector3.new(x, rng:NextNumber(-25, 5), backZ - backRadius - 4), backRadius)
+	end
+end
+
+-- Decor pieces -----------------------------------------------------------------------
 
 local function buildTree(rng, position, parent)
-	local height = rng:NextNumber(7, 11)
-	part({
+	local height = rng:NextNumber(8, 13)
+	deco({
 		Name = "Trunk",
-		Size = Vector3.new(1.6, height, 1.6),
-		Position = position + Vector3.new(0, height / 2, 0),
+		Size = Vector3.new(1.8, height, 1.8),
+		CFrame = CFrame.new(position + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6), rng:NextNumber(-0.08, 0.08)),
 		Material = Enum.Material.Wood,
-		Color = Color3.fromRGB(105, 70, 45),
-	}, parent)
-	local leaf = rng:NextNumber(7, 11)
-	part({
-		Name = "Leaves",
-		Shape = Enum.PartType.Ball,
-		Size = Vector3.new(leaf, leaf, leaf),
-		Position = position + Vector3.new(0, height + leaf * 0.3, 0),
-		Material = Enum.Material.Grass,
-		Color = Color3.fromRGB(70 + rng:NextInteger(0, 40), 160 + rng:NextInteger(0, 40), 70),
+		Color = Color3.fromRGB(95, 62, 42),
+		CanQuery = true,
+	}, parent).CanQuery = true
+	local leafColor = Color3.fromRGB(55 + rng:NextInteger(0, 30), 130 + rng:NextInteger(0, 50), 70 + rng:NextInteger(0, 30))
+	for i = 1, 4 do
+		local size = rng:NextNumber(5, 8.5)
+		local offset = Vector3.new(rng:NextNumber(-2.5, 2.5), height + rng:NextNumber(-1, 3) + i * 0.4, rng:NextNumber(-2.5, 2.5))
+		deco({
+			Name = "Leaves",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(size, size, size),
+			Position = position + offset,
+			Material = Enum.Material.Grass,
+			Color = leafColor:Lerp(Color3.fromRGB(150, 220, 120), rng:NextNumber(0, 0.25)),
+			CanCollide = false,
+		}, parent)
+	end
+end
+
+local function buildMushroom(rng, position, parent, withLight)
+	local color = Color3.fromHSV(rng:NextNumber(0.45, 0.95), 0.6, 1)
+	local h = rng:NextNumber(1.2, 2.6)
+	deco({
+		Name = "Stem",
+		Size = Vector3.new(0.5, h, 0.5),
+		Position = position + Vector3.new(0, h / 2, 0),
+		Material = Enum.Material.SmoothPlastic,
+		Color = Color3.fromRGB(235, 230, 210),
 		CanCollide = false,
 	}, parent)
+	local cap = deco({
+		Name = "Cap",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(h * 1.1, h * 1.1, h * 1.1),
+		Position = position + Vector3.new(0, h + 0.1, 0),
+		Material = Enum.Material.Neon,
+		Color = color,
+		CanCollide = false,
+		CastShadow = false,
+	}, parent)
+	if withLight then
+		light(cap, color, 12, 1.2)
+	end
 end
+
+local function buildCrystal(rng, position, parent, color, scale, withLight)
+	local cluster = Instance.new("Model")
+	cluster.Name = "Crystal"
+	for _ = 1, rng:NextInteger(3, 5) do
+		local h = rng:NextNumber(3, 7) * scale
+		local w = h * rng:NextNumber(0.22, 0.32)
+		deco({
+			Name = "Shard",
+			Size = Vector3.new(w, h, w),
+			CFrame = CFrame.new(position + Vector3.new(rng:NextNumber(-1, 1) * scale, h * 0.35, rng:NextNumber(-1, 1) * scale))
+				* CFrame.Angles(rng:NextNumber(-0.45, 0.45), rng:NextNumber(0, 6), rng:NextNumber(-0.45, 0.45)),
+			Material = Enum.Material.Neon,
+			Color = color:Lerp(Color3.new(1, 1, 1), rng:NextNumber(0, 0.3)),
+			Transparency = 0.1,
+			CastShadow = false,
+		}, cluster)
+	end
+	cluster.Parent = parent
+	if withLight then
+		local anchor = cluster:FindFirstChildWhichIsA("BasePart")
+		if anchor then
+			light(anchor, color, 18 * scale, 2)
+		end
+	end
+	return cluster
+end
+
+local function buildLamp(position, parent, color)
+	deco({
+		Name = "LampPole",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(10, 0.6, 0.6),
+		CFrame = CFrame.new(position + Vector3.new(0, 5, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Material = Enum.Material.Metal,
+		Color = Color3.fromRGB(40, 40, 55),
+	}, parent).CanCollide = true
+	local bulb = deco({
+		Name = "LampBulb",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(1.6, 1.6, 1.6),
+		Position = position + Vector3.new(0, 10.4, 0),
+		Material = Enum.Material.Neon,
+		Color = color,
+		CanCollide = false,
+		CastShadow = false,
+	}, parent)
+	light(bulb, color, 26, 1.6)
+end
+
+-- Plots ------------------------------------------------------------------------------
 
 local function buildPlot(index, parent)
 	local cx = (index - (Config.PlotCount + 1) / 2) * Config.PlotSpacing
@@ -698,6 +1532,7 @@ local function buildPlot(index, parent)
 	local halfX = Config.PlotSize.X / 2
 	local halfZ = Config.PlotSize.Z / 2
 	local color = PLOT_COLORS[(index - 1) % #PLOT_COLORS + 1]
+	local dark = Color3.fromRGB(30, 28, 44)
 
 	local model = Instance.new("Model")
 	model.Name = "Plot" .. index
@@ -709,60 +1544,127 @@ local function buildPlot(index, parent)
 		Name = "Floor",
 		Size = Vector3.new(Config.PlotSize.X, 0.5, Config.PlotSize.Z),
 		Position = Vector3.new(cx, 0.25, cz),
-		Material = Enum.Material.SmoothPlastic,
-		Color = color:Lerp(Color3.fromRGB(40, 40, 50), 0.55),
+		Material = Enum.Material.WoodPlanks,
+		Color = color:Lerp(Color3.fromRGB(70, 55, 50), 0.6),
 	}, model)
 
-	-- Border trim
-	part({
-		Name = "Trim",
-		Size = Vector3.new(Config.PlotSize.X, 0.2, 1),
-		Position = Vector3.new(cx, 0.6, cz + halfZ - 0.5),
-		Material = Enum.Material.Neon,
-		Color = color,
-		CanCollide = false,
-	}, model)
+	-- Neon outline around the floor
+	for _, edge in {
+		{ Vector3.new(Config.PlotSize.X, 0.25, 0.6), Vector3.new(cx, 0.6, cz + halfZ - 0.3) },
+		{ Vector3.new(Config.PlotSize.X, 0.25, 0.6), Vector3.new(cx, 0.6, cz - halfZ + 0.3) },
+		{ Vector3.new(0.6, 0.25, Config.PlotSize.Z), Vector3.new(cx - halfX + 0.3, 0.6, cz) },
+		{ Vector3.new(0.6, 0.25, Config.PlotSize.Z), Vector3.new(cx + halfX - 0.3, 0.6, cz) },
+	} do
+		deco({
+			Name = "Trim",
+			Size = edge[1],
+			Position = edge[2],
+			Material = Enum.Material.Neon,
+			Color = color,
+			CanCollide = false,
+			CastShadow = false,
+		}, model)
+	end
 
-	-- Walls (back + sides). The front stays open for the laser gate.
-	local wallColor = color:Lerp(Color3.fromRGB(30, 30, 40), 0.35)
+	-- Walls: back + sides, with neon caps and corner pillars
 	part({
 		Name = "BackWall",
-		Size = Vector3.new(Config.PlotSize.X, 9, 1),
-		Position = Vector3.new(cx, 4.5, cz - halfZ),
-		Material = Enum.Material.SmoothPlastic,
-		Color = wallColor,
+		Size = Vector3.new(Config.PlotSize.X, 10, 1.4),
+		Position = Vector3.new(cx, 5, cz - halfZ),
+		Material = Enum.Material.Brick,
+		Color = color:Lerp(dark, 0.55),
+	}, model)
+	deco({
+		Name = "WallCap",
+		Size = Vector3.new(Config.PlotSize.X, 0.5, 1.8),
+		Position = Vector3.new(cx, 10.2, cz - halfZ),
+		Material = Enum.Material.Neon,
+		Color = color,
+		CastShadow = false,
 	}, model)
 	for _, side in { -1, 1 } do
 		part({
 			Name = "SideWall",
-			Size = Vector3.new(1, 6, Config.PlotSize.Z),
+			Size = Vector3.new(1.4, 6, Config.PlotSize.Z),
 			Position = Vector3.new(cx + side * halfX, 3, cz),
-			Material = Enum.Material.SmoothPlastic,
-			Color = wallColor,
+			Material = Enum.Material.Brick,
+			Color = color:Lerp(dark, 0.55),
 		}, model)
+		deco({
+			Name = "WallCap",
+			Size = Vector3.new(1.8, 0.4, Config.PlotSize.Z),
+			Position = Vector3.new(cx + side * halfX, 6.2, cz),
+			Material = Enum.Material.Neon,
+			Color = color,
+			CastShadow = false,
+		}, model)
+		-- Gate pillars at the open front
+		local pillar = part({
+			Name = "Pillar",
+			Size = Vector3.new(2.6, 12, 2.6),
+			Position = Vector3.new(cx + side * (halfX - 0.5), 6, cz + halfZ),
+			Material = Enum.Material.Marble,
+			Color = Color3.fromRGB(235, 235, 245),
+		}, model)
+		local orb = deco({
+			Name = "PillarOrb",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(2.2, 2.2, 2.2),
+			Position = pillar.Position + Vector3.new(0, 7.2, 0),
+			Material = Enum.Material.Neon,
+			Color = color,
+			CanCollide = false,
+			CastShadow = false,
+		}, model)
+		light(orb, color, 22, 1.8)
 	end
 
-	local laser = part({
+	local laser = deco({
 		Name = "Laser",
-		Size = Vector3.new(Config.PlotSize.X - 1, 8, 0.4),
-		Position = Vector3.new(cx, 4, cz + halfZ),
-		Material = Enum.Material.Neon,
-		Color = Color3.fromRGB(255, 40, 60),
+		Size = Vector3.new(Config.PlotSize.X - 3, 9, 0.35),
+		Position = Vector3.new(cx, 4.5, cz + halfZ),
+		Material = Enum.Material.ForceField,
+		Color = Color3.fromRGB(255, 40, 70),
 		Transparency = 1,
 		CanCollide = false,
-		CanTouch = false,
-		CanQuery = false,
+		CastShadow = false,
 	}, model)
 
-	-- Owner sign on the back wall
-	local signPart = part({
+	-- Owner sign floating above the back wall
+	local signPart = deco({
 		Name = "Sign",
-		Size = Vector3.new(30, 6, 1),
-		Position = Vector3.new(cx, 12, cz - halfZ),
+		Size = Vector3.new(24, 5, 0.8),
+		Position = Vector3.new(cx, 14.5, cz - halfZ),
 		Material = Enum.Material.SmoothPlastic,
-		Color = Color3.fromRGB(25, 25, 35),
+		Color = dark,
+		CanCollide = false,
 	}, model)
-	local _, signLabel = billboard(signPart, "Empty Base", UDim2.new(30, 0, 6, 0), Vector3.new(0, 0, 0), color, 300)
+	deco({
+		Name = "SignFrame",
+		Size = Vector3.new(25, 6, 0.5),
+		Position = signPart.Position - Vector3.new(0, 0, 0.3),
+		Material = Enum.Material.Neon,
+		Color = color,
+		CanCollide = false,
+		CastShadow = false,
+	}, model)
+	local signGui = Instance.new("SurfaceGui")
+	signGui.Face = Enum.NormalId.Front
+	signGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	signGui.PixelsPerStud = 40
+	signGui.LightInfluence = 0
+	signGui.Parent = signPart
+	local signLabel = Instance.new("TextLabel")
+	signLabel.Size = UDim2.fromScale(1, 1)
+	signLabel.BackgroundTransparency = 1
+	signLabel.Font = FONT
+	signLabel.TextScaled = true
+	signLabel.Text = "Empty Base"
+	signLabel.TextColor3 = Color3.new(1, 1, 1)
+	signLabel.TextStrokeTransparency = 0
+	signLabel.Parent = signGui
+	-- The front face of a part points to -Z; the sign must face the playfield (+Z)
+	signPart.CFrame = CFrame.lookAt(signPart.Position, signPart.Position + Vector3.new(0, 0, 1))
 
 	-- Pedestals: 4 columns x 4 rows, filled from the back row
 	local pedestals = {}
@@ -772,29 +1674,39 @@ local function buildPlot(index, parent)
 	for _, rz in rows do
 		for _, rx in cols do
 			n += 1
+			local base = Vector3.new(cx + rx, 0.5, cz + rz)
+			flatCylinder({
+				Name = "PedestalBase",
+				Size = Vector3.new(0.5, 7.6, 7.6),
+				Position = base + Vector3.new(0, 0.25, 0),
+				Material = Enum.Material.Marble,
+				Color = Color3.fromRGB(200, 200, 215),
+			}, model)
 			local pedestal = flatCylinder({
 				Name = "Pedestal" .. n,
-				Size = Vector3.new(1.2, 7, 7),
-				Position = Vector3.new(cx + rx, 0.5 + 0.6, cz + rz),
-				Material = Enum.Material.SmoothPlastic,
-				Color = Color3.fromRGB(230, 230, 240),
+				Size = Vector3.new(1.2, 6.4, 6.4),
+				Position = base + Vector3.new(0, 0.6, 0),
+				Material = Enum.Material.Marble,
+				Color = Color3.fromRGB(240, 240, 248),
 			}, model)
 			pedestal:SetAttribute("Slot", n)
 			local ring = flatCylinder({
 				Name = "Ring",
-				Size = Vector3.new(0.2, 7.6, 7.6),
-				Position = Vector3.new(cx + rx, 0.55, cz + rz),
+				Size = Vector3.new(0.15, 6.9, 6.9),
+				Position = base + Vector3.new(0, 1.15, 0),
 				Material = Enum.Material.Neon,
 				Color = color,
 				CanCollide = false,
+				CastShadow = false,
 			}, model)
+			ring.CanQuery = false
 			local lockGui = billboard(
 				pedestal,
-				"LOCKED",
-				UDim2.new(5, 0, 1.4, 0),
-				Vector3.new(0, 2, 0),
-				Color3.fromRGB(200, 200, 200),
-				80
+				"🔒 Buy in Shop",
+				UDim2.new(6, 0, 1.4, 0),
+				Vector3.new(0, 2.2, 0),
+				Color3.fromRGB(210, 210, 220),
+				70
 			)
 			lockGui.Name = "LockGui"
 			lockGui.Enabled = false
@@ -802,22 +1714,36 @@ local function buildPlot(index, parent)
 		end
 	end
 
-	-- Speed pad (back strip): "+1 speed every second"
+	-- Speed pad: "+speed every second"
 	local speedPad = part({
 		Name = "SpeedPad",
 		Size = Vector3.new(22, 0.3, 8),
-		Position = Vector3.new(cx, 0.65, cz - halfZ + 5.5),
+		Position = Vector3.new(cx, 0.65, cz - halfZ + 5.6),
 		Material = Enum.Material.Neon,
-		Color = Color3.fromRGB(60, 200, 255),
+		Color = Color3.fromRGB(50, 190, 255),
 		CanCollide = false,
+		CastShadow = false,
 	}, model)
+	for i = -2, 2 do
+		deco({
+			Name = "Chevron",
+			Size = Vector3.new(1, 0.35, 5),
+			CFrame = CFrame.new(cx + i * 4, 0.7, cz - halfZ + 5.6) * CFrame.Angles(0, math.rad(45), 0),
+			Material = Enum.Material.Neon,
+			Color = Color3.fromRGB(200, 245, 255),
+			CanCollide = false,
+			CastShadow = false,
+		}, model)
+	end
+	sparkleEmitter(speedPad, Color3.fromRGB(120, 220, 255), 12, 0.5, 4)
+	light(speedPad, Color3.fromRGB(80, 200, 255), 16, 1.5)
 	billboard(
 		speedPad,
-		"⚡ SPEED PAD ⚡\nstand here: +speed every second",
-		UDim2.new(16, 0, 3.5, 0),
-		Vector3.new(0, 3.2, 0),
-		Color3.fromRGB(150, 230, 255),
-		120
+		"⚡ SPEED PAD ⚡\n+speed every second",
+		UDim2.new(14, 0, 3.2, 0),
+		Vector3.new(0, 3.4, 0),
+		Color3.fromRGB(170, 235, 255),
+		110
 	)
 
 	-- Collect pad (front left)
@@ -826,16 +1752,19 @@ local function buildPlot(index, parent)
 		Size = Vector3.new(11, 0.3, 8),
 		Position = Vector3.new(cx - 17, 0.65, cz + halfZ - 6),
 		Material = Enum.Material.Neon,
-		Color = Color3.fromRGB(80, 230, 100),
+		Color = Color3.fromRGB(70, 225, 100),
 		CanCollide = false,
+		CastShadow = false,
 	}, model)
+	sparkleEmitter(collectPad, Color3.fromRGB(255, 225, 90), 6, 0.6, 3)
+	light(collectPad, Color3.fromRGB(90, 255, 120), 14, 1.3)
 	local _, bankLabel = billboard(
 		collectPad,
 		"💰 $0\nstep to collect",
-		UDim2.new(10, 0, 3.5, 0),
-		Vector3.new(0, 3.2, 0),
-		Color3.fromRGB(170, 255, 170),
-		120
+		UDim2.new(10, 0, 3.4, 0),
+		Vector3.new(0, 3.4, 0),
+		Color3.fromRGB(180, 255, 180),
+		110
 	)
 
 	-- Lock pad (front right)
@@ -844,19 +1773,20 @@ local function buildPlot(index, parent)
 		Size = Vector3.new(9, 0.3, 8),
 		Position = Vector3.new(cx + 18, 0.65, cz + halfZ - 6),
 		Material = Enum.Material.Neon,
-		Color = Color3.fromRGB(255, 70, 80),
+		Color = Color3.fromRGB(255, 60, 80),
 		CanCollide = false,
+		CastShadow = false,
 	}, model)
+	light(lockPad, Color3.fromRGB(255, 70, 90), 12, 1.2)
 	local _, lockLabel = billboard(
 		lockPad,
 		"🔒 LOCK BASE",
-		UDim2.new(9, 0, 2.5, 0),
-		Vector3.new(0, 3, 0),
-		Color3.fromRGB(255, 180, 180),
-		120
+		UDim2.new(9, 0, 2.4, 0),
+		Vector3.new(0, 3.2, 0),
+		Color3.fromRGB(255, 190, 190),
+		110
 	)
 
-	-- Where the carry beam points to
 	local depositAttachment = Instance.new("Attachment")
 	depositAttachment.Name = "DepositPoint"
 	depositAttachment.Position = Vector3.new(0, 3, 0)
@@ -894,77 +1824,122 @@ local function buildPlot(index, parent)
 	}
 end
 
-local function buildGate(zone, parent)
+-- Zones ----------------------------------------------------------------------------
+
+local ZONE_GLOW = {
+	Color3.fromRGB(120, 255, 140),
+	Color3.fromRGB(255, 200, 90),
+	Color3.fromRGB(255, 110, 40),
+	Color3.fromRGB(190, 110, 255),
+}
+
+local function buildGate(zoneIndex, zone, parent)
 	local gateZ = zone.ZMin - 10
-	local curtain = part({
+	local glow = ZONE_GLOW[zoneIndex] or Color3.fromRGB(80, 200, 255)
+	deco({
 		Name = "Gate_" .. zone.Name,
-		Size = Vector3.new(W * 2, 16, 0.6),
-		Position = Vector3.new(0, 8, gateZ),
+		Size = Vector3.new(W * 2, 18, 0.5),
+		Position = Vector3.new(0, 9, gateZ),
 		Material = Enum.Material.ForceField,
-		Color = Color3.fromRGB(80, 200, 255),
-		Transparency = 0.2,
+		Color = glow,
+		Transparency = 0.1,
 		CanCollide = false,
-		CanTouch = false,
-		CanQuery = false,
+		CastShadow = false,
 	}, parent)
-	for _, x in { -140, 0, 140 } do
-		local anchor = part({
+	deco({
+		Name = "GateLine",
+		Size = Vector3.new(W * 2, 0.3, 1.2),
+		Position = Vector3.new(0, 0.15, gateZ),
+		Material = Enum.Material.Neon,
+		Color = glow,
+		CanCollide = false,
+		CastShadow = false,
+	}, parent)
+	for _, x in { -150, -50, 50, 150 } do
+		local pylon = part({
+			Name = "GatePylon",
+			Size = Vector3.new(3, 22, 3),
+			Position = Vector3.new(x, 11, gateZ),
+			Material = Enum.Material.Metal,
+			Color = Color3.fromRGB(45, 45, 60),
+		}, parent)
+		local top = deco({
+			Name = "PylonTop",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(3.4, 3.4, 3.4),
+			Position = pylon.Position + Vector3.new(0, 12.5, 0),
+			Material = Enum.Material.Neon,
+			Color = glow,
+			CanCollide = false,
+			CastShadow = false,
+		}, parent)
+		light(top, glow, 30, 2)
+	end
+	for _, x in { -100, 100 } do
+		local anchor = deco({
 			Name = "GateSign",
 			Size = Vector3.new(1, 1, 1),
-			Position = Vector3.new(x, 19, gateZ),
+			Position = Vector3.new(x, 22, gateZ),
 			Transparency = 1,
 			CanCollide = false,
-			CanTouch = false,
-			CanQuery = false,
 		}, parent)
 		billboard(
 			anchor,
-			"⚡ " .. zone.Speed .. " SPEED ⚡\n" .. zone.Name,
-			UDim2.new(26, 0, 7, 0),
+			"⚡ " .. zone.Speed .. " SPEED ⚡\n" .. string.upper(zone.Name),
+			UDim2.new(30, 0, 8, 0),
 			Vector3.new(0, 0, 0),
-			Color3.fromRGB(150, 230, 255),
-			400
+			glow,
+			450
 		)
 	end
-	return curtain
 end
 
 local function decorateZone(zoneIndex, zone, rng, parent, info)
 	local zMin = zone.ZMin
 	local zMax = zone.ZMax
+	local function randomX(margin)
+		return rng:NextNumber(-W + margin, W - margin)
+	end
 	if zoneIndex == 1 then
-		for _ = 1, 16 do
-			local x = rng:NextNumber(-W + 10, W - 10)
-			local z = rng:NextNumber(zMin, zMax)
-			buildTree(rng, Vector3.new(x, 0, z), parent)
+		for _ = 1, 18 do
+			buildTree(rng, Vector3.new(randomX(10), 0, rng:NextNumber(zMin, zMax)), parent)
+		end
+		for i = 1, 40 do
+			buildMushroom(rng, Vector3.new(randomX(6), 0, rng:NextNumber(zMin - 5, zMax)), parent, i % 4 == 0)
+		end
+		for _ = 1, 10 do
+			local size = rng:NextNumber(3, 6)
+			deco({
+				Name = "Boulder",
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.new(size, size, size),
+				Position = Vector3.new(randomX(10), size * 0.15, rng:NextNumber(zMin, zMax)),
+				Material = Enum.Material.Slate,
+				Color = Color3.fromRGB(110, 110, 125),
+			}, parent).CanCollide = true
 		end
 	elseif zoneIndex == 2 then
 		for _ = 1, 14 do
 			local size = rng:NextNumber(4, 10)
-			part({
+			deco({
 				Name = "Rock",
 				Shape = Enum.PartType.Ball,
 				Size = Vector3.new(size, size, size),
-				Position = Vector3.new(rng:NextNumber(-W + 10, W - 10), size * 0.1, rng:NextNumber(zMin, zMax)),
-				Material = Enum.Material.Slate,
-				Color = Color3.fromRGB(150, 120, 90),
-			}, parent)
+				Position = Vector3.new(randomX(10), size * 0.1, rng:NextNumber(zMin, zMax)),
+				Material = Enum.Material.Sandstone,
+				Color = Color3.fromRGB(175, 130, 90),
+			}, parent).CanCollide = true
 		end
-		for _ = 1, 10 do
-			local d = rng:NextNumber(12, 24)
-			flatCylinder({
-				Name = "Crater",
-				Size = Vector3.new(0.2, d, d),
-				Position = Vector3.new(rng:NextNumber(-W + 15, W - 15), 0.1, rng:NextNumber(zMin, zMax)),
-				Material = Enum.Material.Sand,
-				Color = Color3.fromRGB(180, 140, 90),
-				CanCollide = false,
-			}, parent)
+		for i = 1, 12 do
+			local position = Vector3.new(randomX(15), 0, rng:NextNumber(zMin, zMax))
+			terrain:FillCylinder(CFrame.new(position - Vector3.new(0, 1.5, 0)), 3, rng:NextNumber(8, 13), Enum.Material.Basalt)
+			buildCrystal(rng, position, parent, Color3.fromRGB(255, 190, 80):Lerp(Color3.fromRGB(80, 200, 255), rng:NextNumber()), 0.8, i % 3 == 0)
 		end
 	elseif zoneIndex == 3 then
 		for _ = 1, 12 do
 			local d = rng:NextNumber(14, 26)
-			local pos = Vector3.new(rng:NextNumber(-W + 20, W - 20), 0.15, rng:NextNumber(zMin + 15, zMax - 10))
+			local pos = Vector3.new(randomX(20), 0.15, rng:NextNumber(zMin + 15, zMax - 10))
+			terrain:FillCylinder(CFrame.new(pos - Vector3.new(0, 1.8, 0)), 3.5, d / 2 + 4, Enum.Material.CrackedLava)
 			local pool = flatCylinder({
 				Name = "Lava",
 				Size = Vector3.new(0.3, d, d),
@@ -972,78 +1947,95 @@ local function decorateZone(zoneIndex, zone, rng, parent, info)
 				Material = Enum.Material.Neon,
 				Color = Color3.fromRGB(255, 100, 20),
 				CanCollide = false,
+				CanQuery = false,
+				CastShadow = false,
 			}, parent)
-			local light = Instance.new("PointLight")
-			light.Color = Color3.fromRGB(255, 120, 30)
-			light.Range = d
-			light.Brightness = 2
-			light.Parent = pool
+			light(pool, Color3.fromRGB(255, 120, 30), d * 1.2, 2.5)
+			local embers = sparkleEmitter(pool, Color3.fromRGB(255, 140, 40), 6, 0.5, 5)
+			embers.EmissionDirection = Enum.NormalId.Right
 			table.insert(info.LavaPools, { Position = pos, Radius = d / 2 })
 		end
-		for _ = 1, 18 do
-			local h = rng:NextNumber(5, 14)
-			part({
+		for _ = 1, 22 do
+			local h = rng:NextNumber(6, 16)
+			deco({
 				Name = "Spike",
-				Size = Vector3.new(3, h, 3),
-				CFrame = CFrame.new(rng:NextNumber(-W + 10, W - 10), h / 2 - 1, rng:NextNumber(zMin, zMax))
+				Size = Vector3.new(3.5, h, 3.5),
+				CFrame = CFrame.new(randomX(10), h / 2 - 1.5, rng:NextNumber(zMin, zMax))
 					* CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, 6), rng:NextNumber(-0.3, 0.3)),
 				Material = Enum.Material.Basalt,
-				Color = Color3.fromRGB(40, 30, 30),
-			}, parent)
+				Color = Color3.fromRGB(40, 32, 34),
+			}, parent).CanCollide = true
 		end
 	elseif zoneIndex == 4 then
-		for z = zMin, zMax, 40 do
-			part({
+		for z = zMin, zMax, 30 do
+			deco({
 				Name = "GridLine",
-				Size = Vector3.new(W * 2, 0.1, 0.5),
-				Position = Vector3.new(0, 0.05, z),
+				Size = Vector3.new(W * 2, 0.12, 0.45),
+				Position = Vector3.new(0, 0.06, z),
 				Material = Enum.Material.Neon,
 				Color = Color3.fromRGB(150, 80, 255),
 				CanCollide = false,
+				CastShadow = false,
 			}, parent)
 		end
-		for _ = 1, 20 do
-			local size = rng:NextNumber(3, 9)
-			part({
+		for x = -W, W, 30 do
+			deco({
+				Name = "GridLine",
+				Size = Vector3.new(0.45, 0.12, zMax - zMin + 20),
+				Position = Vector3.new(x, 0.06, (zMin + zMax) / 2),
+				Material = Enum.Material.Neon,
+				Color = Color3.fromRGB(110, 60, 220),
+				CanCollide = false,
+				CastShadow = false,
+			}, parent)
+		end
+		for i = 1, 14 do
+			buildCrystal(rng, Vector3.new(randomX(12), 0, rng:NextNumber(zMin, zMax)), parent, Color3.fromRGB(180, 90, 255), 1.6, i % 2 == 0)
+		end
+		for _ = 1, 24 do
+			local size = rng:NextNumber(3, 10)
+			deco({
 				Name = "Orb",
 				Shape = Enum.PartType.Ball,
 				Size = Vector3.new(size, size, size),
-				Position = Vector3.new(rng:NextNumber(-W, W), rng:NextNumber(30, 80), rng:NextNumber(zMin, zMax)),
+				Position = Vector3.new(rng:NextNumber(-W, W), rng:NextNumber(35, 90), rng:NextNumber(zMin, zMax)),
 				Material = Enum.Material.Neon,
-				Color = Color3.fromHSV(rng:NextNumber(0.7, 0.9), 0.7, 1),
+				Color = Color3.fromHSV(rng:NextNumber(0.7, 0.92), 0.65, 1),
 				CanCollide = false,
-				CanQuery = false,
-				CanTouch = false,
+				CastShadow = false,
 			}, parent)
 		end
 		local midZ = (zMin + zMax) / 2
 		for i, x in { -130, 0, 130 } do
 			local center = Vector3.new(x, 2.5, midZ + (i - 2) * 40)
-			local bar = part({
+			local bar = deco({
 				Name = "Sweeper",
 				Size = Vector3.new(70, 2, 2),
 				CFrame = CFrame.new(center),
 				Material = Enum.Material.Neon,
 				Color = Color3.fromRGB(255, 50, 200),
 				CanCollide = false,
-				CanTouch = false,
-				CanQuery = false,
+				CastShadow = false,
 			}, parent)
-			part({
+			light(bar, Color3.fromRGB(255, 60, 200), 20, 1.5)
+			deco({
 				Name = "SweeperHub",
 				Shape = Enum.PartType.Cylinder,
 				Size = Vector3.new(5, 6, 6),
 				CFrame = CFrame.new(center - Vector3.new(0, 1, 0)) * CFrame.Angles(0, 0, math.rad(90)),
 				Material = Enum.Material.Metal,
 				Color = Color3.fromRGB(60, 60, 80),
-			}, parent)
+			}, parent).CanCollide = true
 			table.insert(info.Sweepers, { Part = bar, Center = center, Speed = 0.9 + i * 0.25, Angle = i })
 		end
 	end
 end
 
+-- Build ----------------------------------------------------------------------------
+
 function MapBuilder.Build()
 	setupLighting()
+	setupTerrainColors()
 
 	local mapFolder = Instance.new("Folder")
 	mapFolder.Name = "Map"
@@ -1066,7 +2058,6 @@ function MapBuilder.Build()
 		Sweepers = {},
 	}
 
-	-- Remove the default baseplate if the place has one
 	local baseplate = workspace:FindFirstChild("Baseplate")
 	if baseplate then
 		baseplate:Destroy()
@@ -1074,21 +2065,29 @@ function MapBuilder.Build()
 
 	local firstZ = Config.Zones[1].ZMin - 8
 	local backZ = Config.PlotCenterZ - Config.PlotSize.Z / 2 - 25
-	part({
-		Name = "BaseGround",
-		Size = Vector3.new(W * 2, 4, firstZ - backZ),
-		Position = Vector3.new(0, -2, (firstZ + backZ) / 2),
-		Material = Enum.Material.SmoothPlastic,
-		Color = Color3.fromRGB(70, 74, 96),
-	}, mapFolder)
 
-	part({
-		Name = "Road",
-		Size = Vector3.new(W * 2, 0.1, 40),
-		Position = Vector3.new(0, 0.05, 22),
-		Material = Enum.Material.SmoothPlastic,
-		Color = Color3.fromRGB(90, 95, 120),
-	}, mapFolder)
+	-- Rocky apron outside the playfield so there is no void between the field and the mountains
+	local farGuess = Config.Zones[#Config.Zones].ZMax + 20
+	fill(-W - 260, W + 260, backZ - 220, farGuess + 220, Enum.Material.Rock, 16)
+
+	-- Base area + road (terrain, top surface at y = 0)
+	fill(-W, W, backZ, firstZ, Enum.Material.Concrete)
+	fill(-W, W, 4, 42, Enum.Material.Asphalt)
+	for x = -W + 20, W - 20, 40 do
+		deco({
+			Name = "RoadStripe",
+			Size = Vector3.new(14, 0.1, 0.8),
+			Position = Vector3.new(x, 0.05, 23),
+			Material = Enum.Material.Neon,
+			Color = Color3.fromRGB(255, 220, 120),
+			CanCollide = false,
+			CastShadow = false,
+		}, mapFolder)
+	end
+	for x = -W + 35, W - 35, 70 do
+		buildLamp(Vector3.new(x, 0, 2), mapFolder, Color3.fromRGB(255, 215, 150))
+		buildLamp(Vector3.new(x, 0, 46), mapFolder, Color3.fromRGB(150, 210, 255))
+	end
 
 	-- Zones
 	local rng = Random.new(1337)
@@ -1098,17 +2097,15 @@ function MapBuilder.Build()
 		if zoneIndex == #Config.Zones then
 			endZ = zone.ZMax + 20
 		end
-		part({
-			Name = "Ground_" .. zone.Name,
-			Size = Vector3.new(W * 2, 4, endZ - startZ),
-			Position = Vector3.new(0, -2, (startZ + endZ) / 2),
-			Material = zone.Material,
-			Color = zone.Color,
-		}, mapFolder)
+		local material = zone.Material
+		if zone.Material == Enum.Material.Glass then
+			material = Enum.Material.Slate
+		end
+		fill(-W, W, startZ, endZ, material)
 
 		local zoneInfo = { Zone = zone, GateZ = nil }
 		if zone.Speed > 0 then
-			zoneInfo.Gate = buildGate(zone, mapFolder)
+			buildGate(zoneIndex, zone, mapFolder)
 			zoneInfo.GateZ = zone.ZMin - 10
 		end
 		info.Zones[zoneIndex] = zoneInfo
@@ -1118,41 +2115,48 @@ function MapBuilder.Build()
 		decor.Parent = mapFolder
 		decorateZone(zoneIndex, zone, rng, decor, info)
 
-		local signAnchor = part({
+		local signAnchor = deco({
 			Name = "ZoneSign",
 			Size = Vector3.new(1, 1, 1),
-			Position = Vector3.new(0, 30, zone.ZMin + 5),
+			Position = Vector3.new(0, 34, zone.ZMin + 6),
 			Transparency = 1,
 			CanCollide = false,
-			CanTouch = false,
-			CanQuery = false,
 		}, mapFolder)
-		billboard(signAnchor, zone.Name, UDim2.new(40, 0, 8, 0), Vector3.new(0, 0, 0), Color3.new(1, 1, 1), 500)
+		billboard(
+			signAnchor,
+			string.upper(zone.Name),
+			UDim2.new(46, 0, 8, 0),
+			Vector3.new(0, 0, 0),
+			ZONE_GLOW[zoneIndex] or Color3.new(1, 1, 1),
+			500
+		)
 
 		startZ = endZ
 	end
 	info.FarZ = startZ
+
+	buildMountains(backZ, info.FarZ)
 
 	-- Invisible boundary walls
 	local length = info.FarZ - backZ
 	for _, side in { -1, 1 } do
 		part({
 			Name = "Boundary",
-			Size = Vector3.new(2, 120, length),
-			Position = Vector3.new(side * (W + 1), 60, (info.FarZ + backZ) / 2),
+			Size = Vector3.new(2, 160, length),
+			Position = Vector3.new(side * (W + 1), 80, (info.FarZ + backZ) / 2),
 			Transparency = 1,
 		}, mapFolder)
 	end
 	part({
 		Name = "Boundary",
-		Size = Vector3.new(W * 2, 120, 2),
-		Position = Vector3.new(0, 60, backZ - 1),
+		Size = Vector3.new(W * 2, 160, 2),
+		Position = Vector3.new(0, 80, backZ - 1),
 		Transparency = 1,
 	}, mapFolder)
 	part({
 		Name = "Boundary",
-		Size = Vector3.new(W * 2, 120, 2),
-		Position = Vector3.new(0, 60, info.FarZ + 1),
+		Size = Vector3.new(W * 2, 160, 2),
+		Position = Vector3.new(0, 80, info.FarZ + 1),
 		Transparency = 1,
 	}, mapFolder)
 
@@ -1160,32 +2164,32 @@ function MapBuilder.Build()
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "Spawn"
 	spawn.Anchored = true
-	spawn.Size = Vector3.new(14, 1, 14)
-	spawn.Position = Vector3.new(0, 0.5, 30)
+	spawn.Size = Vector3.new(14, 0.6, 14)
+	spawn.Position = Vector3.new(0, 0.3, 30)
 	spawn.Material = Enum.Material.Neon
 	spawn.Color = Color3.fromRGB(80, 200, 255)
 	spawn.Neutral = true
 	spawn.Duration = 0
 	spawn.TopSurface = Enum.SurfaceType.Smooth
+	spawn.Transparency = 0.3
 	spawn.Parent = mapFolder
 	info.Spawn = spawn
 
-	local titleAnchor = part({
+	local titleAnchor = deco({
 		Name = "Title",
 		Size = Vector3.new(1, 1, 1),
-		Position = Vector3.new(0, 22, 40),
+		Position = Vector3.new(0, 26, 44),
 		Transparency = 1,
 		CanCollide = false,
-		CanTouch = false,
-		CanQuery = false,
 	}, mapFolder)
 	billboard(
 		titleAnchor,
 		"☄️ STEAL A METEOR ☄️",
-		UDim2.new(46, 0, 9, 0),
+		UDim2.new(50, 0, 9, 0),
 		Vector3.new(0, 0, 0),
-		Color3.fromRGB(255, 220, 120),
-		300
+		Color3.fromRGB(255, 225, 110),
+		320,
+		Color3.fromRGB(120, 40, 0)
 	)
 
 	-- Plots
@@ -1200,527 +2204,12 @@ return MapBuilder
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX427A572A3A624A47BBE24756E71CE0F1">
-					<Properties>
-						<string name="Name">Visuals</string>
-						<ProtectedString name="Source"><![CDATA[-- Visuals: builds every model in code (meteors, Meteorlings, hammer, effects),
--- so the game needs no imported assets.
-
-local CollectionService = game:GetService("CollectionService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Config = require(Shared.Config)
-local Util = require(Shared.Util)
-
-local Visuals = {}
-
-local FONT = Enum.Font.FredokaOne
-
-local function make(className, props, parent)
-	local inst = Instance.new(className)
-	for key, value in props do
-		inst[key] = value
-	end
-	if parent then
-		inst.Parent = parent
-	end
-	return inst
-end
-Visuals.Make = make
-
-local function weld(part0, part1)
-	return make("WeldConstraint", { Part0 = part0, Part1 = part1 }, part1)
-end
-
--- A part that is welded to a root and follows it around.
--- The CFrame must be set BEFORE welding: setting CFrame on a welded part moves the whole assembly.
-local function attachedPart(root, props, cframe)
-	local part = make("Part", props)
-	part.Anchored = false
-	part.CanCollide = false
-	part.CanTouch = false
-	part.CanQuery = false
-	part.Massless = true
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	part.CFrame = cframe
-	part.Parent = root.Parent
-	weld(root, part)
-	return part
-end
-
-local function newRoot(model, props)
-	local root = make("Part", props)
-	root.Name = "Root"
-	root.Anchored = true
-	root.CanCollide = false
-	root.CanTouch = false
-	root.CanQuery = true
-	root.TopSurface = Enum.SurfaceType.Smooth
-	root.BottomSurface = Enum.SurfaceType.Smooth
-	root.Parent = model
-	model.PrimaryPart = root
-	return root
-end
-
-local function label(parent, props)
-	local lbl = make("TextLabel", {
-		BackgroundTransparency = 1,
-		Font = FONT,
-		TextScaled = true,
-		TextColor3 = Color3.new(1, 1, 1),
-		TextStrokeTransparency = 0,
-		TextStrokeColor3 = Color3.new(0, 0, 0),
-	})
-	for key, value in props do
-		lbl[key] = value
-	end
-	lbl.Parent = parent
-	return lbl
-end
-Visuals.Label = label
-
-local function addMutationLook(model, root, item)
-	if not item.mut then
-		return
-	end
-	local mutation = Config.MutationByName[item.mut]
-	if not mutation then
-		return
-	end
-	make("Highlight", {
-		FillColor = mutation.Color,
-		FillTransparency = 0.55,
-		OutlineColor = mutation.Color,
-		OutlineTransparency = 0,
-		DepthMode = Enum.HighlightDepthMode.Occluded,
-	}, model)
-	make("ParticleEmitter", {
-		Color = ColorSequence.new(mutation.Color),
-		LightEmission = 1,
-		Rate = 10,
-		Lifetime = NumberRange.new(0.8, 1.4),
-		Speed = NumberRange.new(1, 3),
-		SpreadAngle = Vector2.new(180, 180),
-		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) }),
-		Texture = "rbxasset://textures/particles/sparkles_main.dds",
-	}, root)
-end
-
--- Billboard above an item: name, rarity, mutation, income or hatch timer.
-local function itemBillboard(root, item, height, showIncome)
-	local info = Config.MeteorlingById[item.id]
-	local rarity = Util.GetRarity(info.Rarity)
-
-	local gui = make("BillboardGui", {
-		Name = "ItemGui",
-		Size = UDim2.new(8, 0, 3.4, 0),
-		StudsOffsetWorldSpace = Vector3.new(0, height / 2 + 2.2, 0),
-		MaxDistance = 140,
-		LightInfluence = 0,
-		AlwaysOnTop = false,
-	}, root)
-
-	local list = make("UIListLayout", {
-		FillDirection = Enum.FillDirection.Vertical,
-		HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		VerticalAlignment = Enum.VerticalAlignment.Bottom,
-		SortOrder = Enum.SortOrder.LayoutOrder,
-	})
-	list.Parent = gui
-
-	if item.mut then
-		local mutation = Config.MutationByName[item.mut]
-		label(gui, {
-			Name = "Mutation",
-			LayoutOrder = 1,
-			Size = UDim2.new(1, 0, 0.22, 0),
-			Text = string.upper(item.mut) .. " x" .. tostring(mutation and mutation.Mult or 1),
-			TextColor3 = mutation and mutation.Color or Color3.new(1, 1, 1),
-		})
-	end
-
-	local nameText = item.id
-	if not item.hatched then
-		nameText = rarity.Name .. " Meteor"
-	end
-	label(gui, {
-		Name = "Title",
-		LayoutOrder = 2,
-		Size = UDim2.new(1, 0, 0.3, 0),
-		Text = nameText,
-	})
-
-	local rarityLabel = label(gui, {
-		Name = "Rarity",
-		LayoutOrder = 3,
-		Size = UDim2.new(1, 0, 0.22, 0),
-		Text = rarity.Name,
-		TextColor3 = rarity.Color,
-	})
-	if rarity.Name == "Secret" then
-		rarityLabel.TextColor3 = Color3.new(1, 1, 1)
-		rarityLabel.TextStrokeColor3 = Color3.fromRGB(255, 0, 200)
-	end
-
-	if showIncome then
-		if item.hatched then
-			label(gui, {
-				Name = "Income",
-				LayoutOrder = 4,
-				Size = UDim2.new(1, 0, 0.26, 0),
-				Text = Util.FormatMoney(Util.ItemIncome(item)) .. "/s",
-				TextColor3 = Color3.fromRGB(120, 255, 120),
-			})
-		elseif item.hatchAt then
-			local timer = label(gui, {
-				Name = "Timer",
-				LayoutOrder = 4,
-				Size = UDim2.new(1, 0, 0.26, 0),
-				Text = "Hatching...",
-				TextColor3 = Color3.fromRGB(255, 230, 120),
-			})
-			timer:SetAttribute("HatchAt", item.hatchAt)
-			CollectionService:AddTag(timer, "HatchTimer")
-		end
-	end
-	return gui
-end
-
--- An unhatched meteor: glowing core with a rocky shell.
-function Visuals.MeteorModel(item, showIncome)
-	local info = Config.MeteorlingById[item.id]
-	local rarity = Util.GetRarity(info.Rarity)
-	local size = rarity.Size
-
-	local model = Instance.new("Model")
-	model.Name = "Meteor"
-	local root = newRoot(model, {
-		Shape = Enum.PartType.Ball,
-		Size = Vector3.new(size, size, size),
-		Material = Enum.Material.Neon,
-		Color = rarity.Color,
-	})
-
-	local rng = Random.new()
-	for i = 1, 6 do
-		local angle = CFrame.Angles(rng:NextNumber(0, math.pi * 2), rng:NextNumber(0, math.pi * 2), 0)
-		attachedPart(root, {
-			Name = "Rock" .. i,
-			Size = Vector3.new(size * 0.5, size * 0.32, size * 0.5),
-			Material = Enum.Material.Basalt,
-			Color = Color3.fromRGB(55, 48, 48),
-		}, root.CFrame * angle * CFrame.new(0, size * 0.4, 0))
-	end
-
-	make("PointLight", {
-		Color = rarity.Color,
-		Range = math.min(60, size * 4),
-		Brightness = 2.5,
-	}, root)
-
-	make("ParticleEmitter", {
-		Name = "Embers",
-		Color = ColorSequence.new(rarity.Color),
-		LightEmission = 1,
-		Rate = 6 + Config.RarityIndex[rarity.Name] * 3,
-		Lifetime = NumberRange.new(0.6, 1.2),
-		Speed = NumberRange.new(2, 5),
-		SpreadAngle = Vector2.new(180, 180),
-		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.18), NumberSequenceKeypoint.new(1, 0) }),
-		Texture = "rbxasset://textures/particles/sparkles_main.dds",
-	}, root)
-
-	if rarity.Name == "Secret" then
-		make("Highlight", {
-			FillTransparency = 1,
-			OutlineColor = Color3.new(1, 1, 1),
-			DepthMode = Enum.HighlightDepthMode.Occluded,
-		}, model)
-	end
-
-	addMutationLook(model, root, item)
-	itemBillboard(root, item, size, showIncome)
-	return model
-end
-
-local FEATURES = {}
-
-function FEATURES.Ears(root, s, color, accent)
-	for _, side in { -1, 1 } do
-		local ear = attachedPart(root, {
-			Size = Vector3.new(0.5 * s, 1.1 * s, 0.35 * s),
-			Color = color,
-			Material = Enum.Material.SmoothPlastic,
-		}, root.CFrame * CFrame.new(side * 0.7 * s, 1.55 * s, 0) * CFrame.Angles(0, 0, -side * 0.35))
-		local inner = attachedPart(root, {
-			Size = Vector3.new(0.3 * s, 0.7 * s, 0.1 * s),
-			Color = accent,
-			Material = Enum.Material.Neon,
-		}, ear.CFrame * CFrame.new(0, 0, -0.2 * s))
-	end
-end
-
-function FEATURES.Horns(root, s, _color, accent)
-	for _, side in { -1, 1 } do
-		local horn = attachedPart(root, {
-			Size = Vector3.new(0.35 * s, 1.0 * s, 0.35 * s),
-			Color = accent,
-			Material = Enum.Material.Neon,
-		}, root.CFrame * CFrame.new(side * 0.65 * s, 1.45 * s, -0.2 * s) * CFrame.Angles(-0.3, 0, -side * 0.5))
-	end
-end
-
-function FEATURES.Wings(root, s, color, accent)
-	for _, side in { -1, 1 } do
-		local wing = attachedPart(root, {
-			Size = Vector3.new(1.8 * s, 0.15 * s, 1.1 * s),
-			Color = accent,
-			Material = Enum.Material.Neon,
-			Transparency = 0.2,
-		}, root.CFrame * CFrame.new(side * 1.9 * s, 0.4 * s, 0.4 * s) * CFrame.Angles(0, 0, side * 0.45))
-		local edge = attachedPart(root, {
-			Size = Vector3.new(1.4 * s, 0.18 * s, 0.4 * s),
-			Color = color,
-			Material = Enum.Material.SmoothPlastic,
-		}, wing.CFrame * CFrame.new(0, 0.05 * s, -0.45 * s))
-	end
-end
-
-function FEATURES.Antenna(root, s, _color, accent)
-	for _, side in { -1, 1 } do
-		local stalk = attachedPart(root, {
-			Size = Vector3.new(0.12 * s, 1.1 * s, 0.12 * s),
-			Color = Color3.fromRGB(40, 40, 40),
-			Material = Enum.Material.SmoothPlastic,
-		}, root.CFrame * CFrame.new(side * 0.45 * s, 1.75 * s, 0) * CFrame.Angles(0, 0, -side * 0.3))
-		local bulb = attachedPart(root, {
-			Shape = Enum.PartType.Ball,
-			Size = Vector3.new(0.45 * s, 0.45 * s, 0.45 * s),
-			Color = accent,
-			Material = Enum.Material.Neon,
-		}, stalk.CFrame * CFrame.new(0, 0.6 * s, 0))
-	end
-end
-
-function FEATURES.Crown(root, s)
-	local gold = Color3.fromRGB(255, 205, 50)
-	local band = attachedPart(root, {
-		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(0.35 * s, 1.5 * s, 1.5 * s),
-		Color = gold,
-		Material = Enum.Material.Metal,
-	}, root.CFrame * CFrame.new(0, 1.45 * s, 0) * CFrame.Angles(0, 0, math.rad(90)))
-	for i = 0, 4 do
-		local angle = (i / 5) * math.pi * 2
-		local spike = attachedPart(root, {
-			Size = Vector3.new(0.22 * s, 0.6 * s, 0.22 * s),
-			Color = gold,
-			Material = Enum.Material.Neon,
-		}, root.CFrame * CFrame.new(math.cos(angle) * 0.6 * s, 1.85 * s, math.sin(angle) * 0.6 * s))
-	end
-end
-
-function FEATURES.Fins(root, s, color, accent)
-	local fin = attachedPart(root, {
-		Size = Vector3.new(0.2 * s, 1.1 * s, 1.2 * s),
-		Color = accent,
-		Material = Enum.Material.Neon,
-	}, root.CFrame * CFrame.new(0, 1.5 * s, 0.3 * s) * CFrame.Angles(0.5, 0, 0))
-	local tail = attachedPart(root, {
-		Size = Vector3.new(1.8 * s, 0.2 * s, 0.9 * s),
-		Color = color,
-		Material = Enum.Material.SmoothPlastic,
-	}, root.CFrame * CFrame.new(0, 0.2 * s, 1.75 * s))
-end
-
--- A hatched Meteorling: round body, big eyes, one signature feature.
-function Visuals.CreatureModel(item, showIncome)
-	local info = Config.MeteorlingById[item.id]
-	local rarity = Util.GetRarity(info.Rarity)
-	local rarityIndex = Config.RarityIndex[info.Rarity]
-	local s = 0.85 + rarityIndex * 0.17
-	local bodySize = 3 * s
-
-	local model = Instance.new("Model")
-	model.Name = "Meteorling"
-	local root = newRoot(model, {
-		Shape = Enum.PartType.Ball,
-		Size = Vector3.new(bodySize, bodySize, bodySize),
-		Material = Enum.Material.SmoothPlastic,
-		Color = info.Color,
-	})
-
-	-- Ball parts must have a uniform size
-	attachedPart(root, {
-		Name = "Belly",
-		Shape = Enum.PartType.Ball,
-		Size = Vector3.new(1.6 * s, 1.6 * s, 1.6 * s),
-		Color = info.Color:Lerp(Color3.new(1, 1, 1), 0.35),
-		Material = Enum.Material.SmoothPlastic,
-	}, root.CFrame * CFrame.new(0, -0.55 * s, -0.6 * s))
-
-	for _, side in { -1, 1 } do
-		local eye = attachedPart(root, {
-			Shape = Enum.PartType.Ball,
-			Size = Vector3.new(0.85 * s, 0.85 * s, 0.85 * s),
-			Color = Color3.new(1, 1, 1),
-			Material = Enum.Material.SmoothPlastic,
-		}, root.CFrame * CFrame.new(side * 0.55 * s, 0.4 * s, -1.2 * s))
-		local pupil = attachedPart(root, {
-			Shape = Enum.PartType.Ball,
-			Size = Vector3.new(0.45 * s, 0.45 * s, 0.45 * s),
-			Color = Color3.new(0.05, 0.05, 0.08),
-			Material = Enum.Material.SmoothPlastic,
-		}, eye.CFrame * CFrame.new(0, 0, -0.28 * s))
-		local shine = attachedPart(root, {
-			Shape = Enum.PartType.Ball,
-			Size = Vector3.new(0.15 * s, 0.15 * s, 0.15 * s),
-			Color = Color3.new(1, 1, 1),
-			Material = Enum.Material.Neon,
-		}, pupil.CFrame * CFrame.new(0.1 * s, 0.1 * s, -0.15 * s))
-	end
-
-	local feature = FEATURES[info.Feature]
-	if feature then
-		feature(root, s, info.Color, rarity.Color)
-	end
-
-	if rarityIndex >= 5 then
-		make("PointLight", { Color = rarity.Color, Range = 14 + rarityIndex * 2, Brightness = 1.5 }, root)
-	end
-	if rarityIndex >= 6 then
-		make("ParticleEmitter", {
-			Color = ColorSequence.new(rarity.Color),
-			LightEmission = 1,
-			Rate = 8,
-			Lifetime = NumberRange.new(1, 1.6),
-			Speed = NumberRange.new(0.5, 1.5),
-			SpreadAngle = Vector2.new(180, 180),
-			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 0) }),
-			Texture = "rbxasset://textures/particles/sparkles_main.dds",
-		}, root)
-	end
-
-	addMutationLook(model, root, item)
-	itemBillboard(root, item, bodySize + 1.5 * s, showIncome)
-	return model
-end
-
-function Visuals.ItemModel(item, showIncome)
-	if item.hatched then
-		return Visuals.CreatureModel(item, showIncome)
-	end
-	return Visuals.MeteorModel(item, showIncome)
-end
-
--- Red pulsing circle that shows where a meteor is about to land.
-function Visuals.WarningCircle(diameter, color)
-	local circle = make("Part", {
-		Name = "ImpactWarning",
-		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(0.3, diameter, diameter),
-		Material = Enum.Material.Neon,
-		Color = Color3.fromRGB(255, 40, 40),
-		Transparency = 0.35,
-		Anchored = true,
-		CanCollide = false,
-		CanTouch = false,
-		CanQuery = false,
-	})
-	local inner = make("Part", {
-		Name = "Inner",
-		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(0.35, diameter * 0.35, diameter * 0.35),
-		Material = Enum.Material.Neon,
-		Color = color,
-		Anchored = true,
-		CanCollide = false,
-		CanTouch = false,
-		CanQuery = false,
-	}, circle)
-	inner:SetAttribute("Follow", true)
-	return circle, inner
-end
-
--- Tall light beam marking a special meteor (Golden Comet).
-function Visuals.Beacon(position, color)
-	return make("Part", {
-		Name = "Beacon",
-		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(500, 3, 3),
-		CFrame = CFrame.new(position + Vector3.new(0, 250, 0)) * CFrame.Angles(0, 0, math.rad(90)),
-		Material = Enum.Material.Neon,
-		Color = color,
-		Transparency = 0.45,
-		Anchored = true,
-		CanCollide = false,
-		CanTouch = false,
-		CanQuery = false,
-	})
-end
-
-function Visuals.HammerTool(big)
-	local tool = Instance.new("Tool")
-	tool.Name = "Hammer"
-	tool.ToolTip = "Bonk players to make them drop what they carry!"
-	tool.CanBeDropped = false
-	tool.RequiresHandle = true
-	tool.Grip = CFrame.new(0, -1.2, 0)
-
-	local scale = 1
-	local headColor = Color3.fromRGB(255, 120, 40)
-	if big then
-		scale = 1.5
-		headColor = Color3.fromRGB(255, 210, 40)
-	end
-
-	local handle = make("Part", {
-		Name = "Handle",
-		Size = Vector3.new(0.5, 4 * scale, 0.5),
-		Material = Enum.Material.Wood,
-		Color = Color3.fromRGB(110, 70, 40),
-		CanCollide = false,
-		Massless = true,
-	}, tool)
-
-	local head = make("Part", {
-		Name = "Head",
-		Size = Vector3.new(2.4 * scale, 1.4 * scale, 1.4 * scale),
-		Material = Enum.Material.Neon,
-		Color = headColor,
-		CanCollide = false,
-		Massless = true,
-	})
-	head.CFrame = handle.CFrame * CFrame.new(0, 2 * scale, 0)
-	head.Parent = tool
-	make("WeldConstraint", { Part0 = handle, Part1 = head }, head)
-
-	make("Sound", {
-		Name = "Swing",
-		SoundId = "rbxasset://sounds/swordslash.wav",
-		Volume = 0.6,
-	}, handle)
-	make("Sound", {
-		Name = "Hit",
-		SoundId = "rbxasset://sounds/hit.wav",
-		Volume = 0.9,
-	}, handle)
-
-	return tool
-end
-
-return Visuals
-]]></ProtectedString>
-					</Properties>
-				</Item>
 			</Item>
-			<Item class="Folder" referent="RBX0002172EDDFF4DAF9BDFC69B99164D22">
+			<Item class="Folder" referent="RBX133C6F6BDEB044108E5BC9A730798372">
 				<Properties>
 					<string name="Name">Services</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX33E577DD2F8E4550B423D21968F5F98D">
+				<Item class="ModuleScript" referent="RBXF8496E1D94A845C8AB184F2BE2A2848D">
 					<Properties>
 						<string name="Name">CombatService</string>
 						<ProtectedString name="Source"><![CDATA[-- CombatService: the Hammer. Bonk a player to knock them back and make them drop
@@ -1733,7 +2222,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Remotes = require(Shared.Remotes)
 
-local Visuals = require(script.Parent.Parent.Modules.Visuals)
+local Visuals = require(Shared.Visuals)
 
 local CombatService = {}
 local Services
@@ -1819,8 +2308,12 @@ function CombatService.Swing(player, tool, big)
 	if not root then
 		return
 	end
+	if Services.Meteor.GetCarry(player) then
+		return -- hands are full
+	end
 
-	-- Swing animation: tilt the grip forward for a moment
+	-- Swing animation (rotates the shoulder joint) + sound
+	Services.Player.PlaySwing(player)
 	local handle = tool:FindFirstChild("Handle")
 	if handle then
 		local swing = handle:FindFirstChild("Swing")
@@ -1828,13 +2321,12 @@ function CombatService.Swing(player, tool, big)
 			swing:Play()
 		end
 	end
-	local restGrip = tool.Grip
-	tool.Grip = restGrip * CFrame.Angles(math.rad(-80), 0, 0)
-	task.delay(0.18, function()
-		if tool.Parent then
-			tool.Grip = restGrip
-		end
-	end)
+
+	-- Hit lands when the hammer comes down
+	task.wait(0.15)
+	if not root.Parent then
+		return
+	end
 
 	local facing = root.CFrame.LookVector
 	facing = Vector3.new(facing.X, 0, facing.Z).Unit
@@ -1867,7 +2359,7 @@ return CombatService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX07BF3DF44B6548F68D8DABB0046E310E">
+				<Item class="ModuleScript" referent="RBXB62139DC03BE4B379CD1AE1813EC2C76">
 					<Properties>
 						<string name="Name">DataService</string>
 						<ProtectedString name="Source"><![CDATA[-- DataService: loads/saves player data with DataStoreService and pushes a state
@@ -2135,7 +2627,7 @@ return DataService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBXC7F22E1BBD0848159DD10FFC1AD4C250">
+				<Item class="ModuleScript" referent="RBX5BBF7F7C5D2944B2BE4448227D29BF07">
 					<Properties>
 						<string name="Name">EventService</string>
 						<ProtectedString name="Source"><![CDATA[-- EventService: server-wide moments that make the whole lobby scream.
@@ -2264,7 +2756,7 @@ return EventService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBXEFDBEC96BA554D3C990B0F0428F8EF55">
+				<Item class="ModuleScript" referent="RBX6BEC50F6A236481694C8D43E4E097B9B">
 					<Properties>
 						<string name="Name">MeteorService</string>
 						<ProtectedString name="Source"><![CDATA[-- MeteorService: meteors falling from the sky, grabbing, carrying them over your head,
@@ -2282,7 +2774,7 @@ local Config = require(Shared.Config)
 local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
 
-local Visuals = require(script.Parent.Parent.Modules.Visuals)
+local Visuals = require(Shared.Visuals)
 
 local MeteorService = {}
 local Services
@@ -2446,7 +2938,7 @@ function MeteorService.Impact(position, rarity)
 	TweenService:Create(scorch, TweenInfo.new(8), { Transparency = 1 }):Play()
 	Debris:AddItem(scorch, 8.5)
 
-	Remotes.Effect:FireAllClients("Impact", position, rarity.Size)
+	Remotes.Effect:FireAllClients("Impact", position, rarity.Size, rarity.Color)
 end
 
 -- Spawns one meteor in a zone. opts: Rarity, Mutation, Special, Beacon, WarningTime, Lifetime, Announce
@@ -2476,6 +2968,10 @@ function MeteorService.SpawnMeteor(zoneIndex, opts)
 	local warning, inner = Visuals.WarningCircle(rarity.Size * 2 + 6, rarity.Color)
 	warning.CFrame = CFrame.new(target + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, 0, math.rad(90))
 	inner.CFrame = warning.CFrame
+	-- The client shrinks the inner disc and shows a countdown until this time
+	local warningTime = opts.WarningTime or Config.Meteor.WarningTime
+	warning:SetAttribute("ImpactAt", workspace:GetServerTimeNow() + warningTime + Config.Meteor.FallTime)
+	CollectionService:AddTag(warning, "ImpactWarning")
 	warning.Parent = meteorFolder
 	local pulse = TweenService:Create(
 		warning,
@@ -2490,7 +2986,7 @@ function MeteorService.SpawnMeteor(zoneIndex, opts)
 		beacon.Parent = meteorFolder
 	end
 
-	task.delay(opts.WarningTime or Config.Meteor.WarningTime, function()
+	task.delay(warningTime, function()
 		local model = Visuals.MeteorModel(item, false)
 		local root = model.PrimaryPart
 		local startPos = target + Vector3.new(math.random(-90, 90), 280, math.random(-90, 90))
@@ -2533,6 +3029,7 @@ function MeteorService.SpawnMeteor(zoneIndex, opts)
 		trail.Enabled = false
 		Debris:AddItem(fire, 2)
 
+		root:SetAttribute("BaseCF", root.CFrame)
 		MeteorService.Impact(target, rarity)
 		MeteorService.MakeGround(model, item, {
 			Zone = countedZone,
@@ -2550,10 +3047,12 @@ function MeteorService.Carry(player, item, stolen, existingModel)
 	if carries[player] then
 		return false
 	end
-	local root = Services.Player.GetAliveParts(player)
+	local root, humanoid = Services.Player.GetAliveParts(player)
 	if not root then
 		return false
 	end
+	-- Hands are busy: put the hammer away
+	humanoid:UnequipTools()
 
 	local model = existingModel or Visuals.ItemModel(item, false)
 	local primary = model.PrimaryPart
@@ -2569,6 +3068,7 @@ function MeteorService.Carry(player, item, stolen, existingModel)
 		end
 	end
 	CollectionService:RemoveTag(primary, "Bob")
+	CollectionService:RemoveTag(primary, "Spin")
 
 	local offset = CFrame.new(0, 2.8 + primary.Size.Y / 2, 0)
 	model:PivotTo(root.CFrame * offset)
@@ -2594,6 +3094,7 @@ function MeteorService.Carry(player, item, stolen, existingModel)
 
 	player:SetAttribute("Carrying", item.id)
 	player:SetAttribute("CarryStolen", stolen ~= nil)
+	Services.Player.SetCarryPose(player, true)
 	Services.Player.ApplyWalkSpeed(player)
 	Remotes.Effect:FireClient(player, "Grab")
 	return true
@@ -2603,6 +3104,9 @@ local function clearCarry(player)
 	carries[player] = nil
 	player:SetAttribute("Carrying", nil)
 	player:SetAttribute("CarryStolen", nil)
+	if player.Parent then
+		Services.Player.SetCarryPose(player, false)
+	end
 end
 
 function MeteorService.Drop(player, _reason)
@@ -2629,6 +3133,8 @@ function MeteorService.Drop(player, _reason)
 		primary.Anchored = true
 		primary.CanQuery = true
 		model:PivotTo(CFrame.new(position.X, y + rarity.Size * 0.35, position.Z))
+		primary:SetAttribute("BaseCF", primary.CFrame)
+		CollectionService:AddTag(primary, "Spin")
 		model.Parent = meteorFolder
 		MeteorService.MakeGround(model, carry.Item, { Lifetime = Config.Meteor.DropLifetime })
 	end
@@ -2816,13 +3322,14 @@ return MeteorService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBXC6DD6341A9ED49ACAB9BD0FEA65EDA6B">
+				<Item class="ModuleScript" referent="RBX5EE52058454F4D55A11466A2905F7B1C">
 					<Properties>
 						<string name="Name">PlayerService</string>
 						<ProtectedString name="Source"><![CDATA[-- PlayerService: characters, walk speed, game pass ownership and all player multipliers.
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -2981,6 +3488,142 @@ function PlayerService.ApplyWalkSpeed(player)
 	-- Fast players need a stronger jump to feel right
 	humanoid.UseJumpPower = true
 	humanoid.JumpPower = 50 + math.min(30, speed / 10)
+	PlayerService.UpdateTrail(player, data.Speed)
+end
+
+-- Speed trail: everyone sees how fast you are -------------------------------------
+
+local TRAIL_TIERS = {
+	{ Speed = 40, Color = Color3.fromRGB(90, 220, 255) },
+	{ Speed = 90, Color = Color3.fromRGB(190, 110, 255) },
+	{ Speed = 160, Color = Color3.fromRGB(255, 200, 60) },
+	{ Speed = 230, Color = Color3.fromRGB(255, 80, 180) },
+}
+
+function PlayerService.CreateTrail(character)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root or root:FindFirstChild("SpeedTrail") then
+		return
+	end
+	local top = Instance.new("Attachment")
+	top.Name = "TrailTop"
+	top.Position = Vector3.new(0, 1.1, 0.3)
+	top.Parent = root
+	local bottom = Instance.new("Attachment")
+	bottom.Name = "TrailBottom"
+	bottom.Position = Vector3.new(0, -1.8, 0.3)
+	bottom.Parent = root
+	local trail = Instance.new("Trail")
+	trail.Name = "SpeedTrail"
+	trail.Attachment0 = top
+	trail.Attachment1 = bottom
+	trail.Lifetime = 0.35
+	trail.LightEmission = 1
+	trail.LightInfluence = 0
+	trail.MinLength = 0.2
+	trail.Transparency = NumberSequence.new(0.25, 1)
+	trail.WidthScale = NumberSequence.new(1, 0.2)
+	trail.Enabled = false
+	trail.Parent = root
+end
+
+function PlayerService.UpdateTrail(player, speed)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local trail = root and root:FindFirstChild("SpeedTrail")
+	if not trail then
+		return
+	end
+	local color = nil
+	for _, tier in TRAIL_TIERS do
+		if speed >= tier.Speed then
+			color = tier.Color
+		end
+	end
+	trail.Enabled = color ~= nil
+	if color then
+		trail.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
+	end
+end
+
+-- Arm poses (no animation assets needed: we rotate the shoulder joints) ---------
+
+local originalC0 = setmetatable({}, { __mode = "k" })
+
+local function getShoulders(character)
+	local rightArm = character:FindFirstChild("RightUpperArm")
+	local leftArm = character:FindFirstChild("LeftUpperArm")
+	if rightArm and leftArm then
+		return rightArm:FindFirstChild("RightShoulder"), leftArm:FindFirstChild("LeftShoulder"), "R15"
+	end
+	local torso = character:FindFirstChild("Torso")
+	if torso then
+		return torso:FindFirstChild("Right Shoulder"), torso:FindFirstChild("Left Shoulder"), "R6"
+	end
+	return nil, nil, nil
+end
+
+local function baseC0(motor)
+	if not originalC0[motor] then
+		originalC0[motor] = motor.C0
+	end
+	return originalC0[motor]
+end
+
+local function rotated(motor, rig, degrees)
+	local angle = math.rad(degrees)
+	if rig == "R15" then
+		return baseC0(motor) * CFrame.Angles(angle, 0, 0)
+	end
+	return baseC0(motor) * CFrame.Angles(0, 0, angle)
+end
+
+local function tweenC0(motor, goal, duration, style)
+	local tween = TweenService:Create(
+		motor,
+		TweenInfo.new(duration, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ C0 = goal }
+	)
+	tween:Play()
+	return tween
+end
+
+-- Both arms straight up while carrying something over your head
+function PlayerService.SetCarryPose(player, on)
+	local character = player.Character
+	if not character then
+		return
+	end
+	local right, left, rig = getShoulders(character)
+	for _, motor in { right or false, left or false } do
+		if motor and motor:IsA("Motor6D") then
+			if on then
+				tweenC0(motor, rotated(motor, rig, 180), 0.25, Enum.EasingStyle.Back)
+			else
+				tweenC0(motor, baseC0(motor), 0.2)
+			end
+		end
+	end
+end
+
+-- Hammer swing: wind up over the head, smash down, return
+function PlayerService.PlaySwing(player)
+	local character = player.Character
+	if not character then
+		return
+	end
+	local right, _, rig = getShoulders(character)
+	if not right or not right:IsA("Motor6D") then
+		return
+	end
+	task.spawn(function()
+		tweenC0(right, rotated(right, rig, 115), 0.1).Completed:Wait()
+		tweenC0(right, rotated(right, rig, -35), 0.08, Enum.EasingStyle.Quart).Completed:Wait()
+		task.wait(0.05)
+		if right.Parent then
+			tweenC0(right, baseC0(right), 0.22)
+		end
+	end)
 end
 
 function PlayerService.ApplyTag(player)
@@ -3032,6 +3675,7 @@ function PlayerService.OnCharacter(player, character)
 		end)
 	end
 
+	PlayerService.CreateTrail(character)
 	PlayerService.ApplyWalkSpeed(player)
 	PlayerService.ApplyTag(player)
 	Services.Combat.GiveHammer(player, false)
@@ -3057,7 +3701,7 @@ return PlayerService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX20BF7F4CD65A47FEBC3900BB12B232D8">
+				<Item class="ModuleScript" referent="RBX35C0B1E184DD43E9B647CBD14C378F0F">
 					<Properties>
 						<string name="Name">PlotService</string>
 						<ProtectedString name="Source"><![CDATA[-- PlotService: player bases. Pedestals, hatching, income, the Speed/Collect/Lock pads
@@ -3073,7 +3717,7 @@ local Config = require(Shared.Config)
 local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
 
-local Visuals = require(script.Parent.Parent.Modules.Visuals)
+local Visuals = require(Shared.Visuals)
 
 local PlotService = {}
 local Services
@@ -3501,6 +4145,15 @@ local function hatchTick(player, plot, data)
 			Remotes.Effect:FireClient(player, "Hatch", item.id, info.Rarity, item.mut)
 			discover(player, data, item)
 			PlotService.RenderPedestal(plot, i)
+			local pedestal = plot.Pedestals[i]
+			if pedestal then
+				Remotes.Effect:FireAllClients(
+					"HatchFX",
+					pedestal.Part.Position + Vector3.new(0, 3, 0),
+					Util.GetRarity(info.Rarity).Color,
+					Config.RarityIndex[info.Rarity]
+				)
+			end
 		end
 	end
 end
@@ -3626,7 +4279,7 @@ return PlotService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX079907FD65E6439AB32B08C8ED71758E">
+				<Item class="ModuleScript" referent="RBX1CE6270A581B4CDB8F3C6659573B062D">
 					<Properties>
 						<string name="Name">ShopService</string>
 						<ProtectedString name="Source"><![CDATA[-- ShopService: in-game cash purchases (boots, pedestals, rebirth) and Robux purchases.
@@ -3802,27 +4455,28 @@ return ShopService
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX0AB17364163347758539197340BFFE02">
+	<Item class="StarterPlayer" referent="RBXC484DE4398454EEC99DDE583DB0D925C">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBXEA18157125D34CA9BA48FEC6B10B4B88">
+		<Item class="StarterPlayerScripts" referent="RBX049DD18CBE0A477D96B78868D0CC38B2">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX2210F535065F4902894CF5848B2748EB">
+			<Item class="Folder" referent="RBX430DA9E46D5B49A7A4AB65AB1C3A3DAE">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="Folder" referent="RBX88D7FD387CB5449A99031A3F0AB7EDF1">
+				<Item class="Folder" referent="RBX4106FFE642A3472E99B3CF9520E06AE9">
 					<Properties>
 						<string name="Name">Controllers</string>
 					</Properties>
-					<Item class="ModuleScript" referent="RBX01C114FE5AA34D78A07C4C6877C7AD1E">
+					<Item class="ModuleScript" referent="RBXFB2DA0AB746E409DA560BAFF3D568FB6">
 						<Properties>
 							<string name="Name">Effects</string>
-							<ProtectedString name="Source"><![CDATA[-- Effects: knockback from bonks, camera shake from impacts, sounds and popups.
+							<ProtectedString name="Source"><![CDATA[-- Effects: knockback, camera shake, impact shockwaves with debris, hatch bursts, sounds.
 
+local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -3843,6 +4497,10 @@ local sounds = {}
 local shakeUntil = 0
 local shakePower = 0
 local shaking = false
+local fxFolder
+
+local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
+local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 
 local SOUND_IDS = {
 	Collect = "rbxasset://sounds/electronicpingshort.wav",
@@ -3883,22 +4541,84 @@ local function shake(power, duration)
 	end)
 end
 
-local function bonkPopup(position)
-	local anchor = Instance.new("Part")
-	anchor.Anchored = true
-	anchor.CanCollide = false
-	anchor.CanQuery = false
-	anchor.CanTouch = false
-	anchor.Transparency = 1
-	anchor.Size = Vector3.new(1, 1, 1)
-	anchor.Position = position + Vector3.new(0, 3, 0)
-	anchor.Parent = workspace
+local function localPart(props)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	for key, value in props do
+		p[key] = value
+	end
+	p.Parent = fxFolder
+	return p
+end
 
+local function distanceTo(position)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return math.huge
+	end
+	return (root.Position - position).Magnitude
+end
+
+local function ring(position, color, fromSize, toSize, duration)
+	local r = localPart({
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.3, fromSize, fromSize),
+		CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90)),
+		Material = Enum.Material.Neon,
+		Color = color,
+		Transparency = 0.1,
+	})
+	TweenService:Create(r, TweenInfo.new(duration, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+		Size = Vector3.new(0.3, toSize, toSize),
+		Transparency = 1,
+	}):Play()
+	Debris:AddItem(r, duration + 0.1)
+end
+
+local function burst(position, color, count, size, speed, texture)
+	local anchor = localPart({ Size = Vector3.new(1, 1, 1), Position = position, Transparency = 1 })
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Color = ColorSequence.new(color)
+	emitter.LightEmission = 1
+	emitter.LightInfluence = 0
+	emitter.Rate = 0
+	emitter.Lifetime = NumberRange.new(0.6, 1.4)
+	emitter.Speed = NumberRange.new(speed * 0.5, speed)
+	emitter.SpreadAngle = Vector2.new(180, 180)
+	emitter.Drag = 3
+	emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size), NumberSequenceKeypoint.new(1, 0) })
+	emitter.Texture = texture or SPARKLE
+	emitter.Parent = anchor
+	emitter:Emit(count)
+	Debris:AddItem(anchor, 2)
+	return anchor
+end
+
+local function flash(position, color, range, brightness, duration)
+	local anchor = localPart({ Size = Vector3.new(1, 1, 1), Position = position, Transparency = 1 })
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = range
+	light.Brightness = brightness
+	light.Parent = anchor
+	TweenService:Create(light, TweenInfo.new(duration), { Brightness = 0 }):Play()
+	Debris:AddItem(anchor, duration + 0.1)
+end
+
+local function bonkPopup(position)
+	local anchor = localPart({ Size = Vector3.new(1, 1, 1), Position = position + Vector3.new(0, 3, 0), Transparency = 1 })
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.new(6, 0, 2, 0)
+	gui.Size = UDim2.new(7, 0, 2.4, 0)
 	gui.LightInfluence = 0
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 120
+	gui.MaxDistance = 140
 	gui.Parent = anchor
 	local text = Instance.new("TextLabel")
 	text.Size = UDim2.fromScale(1, 1)
@@ -3908,37 +4628,98 @@ local function bonkPopup(position)
 	text.Text = "💥 BONK!"
 	text.TextColor3 = Color3.fromRGB(255, 230, 80)
 	text.TextStrokeTransparency = 0
+	text.Rotation = math.random(-15, 15)
 	text.Parent = gui
-
-	TweenService:Create(anchor, TweenInfo.new(0.9), { Position = anchor.Position + Vector3.new(0, 4, 0) }):Play()
+	TweenService:Create(anchor, TweenInfo.new(0.9, Enum.EasingStyle.Quad), { Position = anchor.Position + Vector3.new(0, 5, 0) }):Play()
 	TweenService:Create(text, TweenInfo.new(0.9), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
-	task.delay(1, function()
-		anchor:Destroy()
-	end)
+	burst(position + Vector3.new(0, 2, 0), Color3.fromRGB(255, 240, 120), 18, 0.8, 18)
+	Debris:AddItem(anchor, 1)
 end
 
 local HANDLERS = {}
 
-function HANDLERS.Impact(position, size)
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not root then
-		return
-	end
-	local distance = (root.Position - position).Magnitude
+function HANDLERS.Impact(position, size, color)
+	color = color or Color3.fromRGB(255, 150, 60)
+	local distance = distanceTo(position)
 	local reach = 60 + size * 12
 	if distance < reach then
-		shake((1 - distance / reach) * (1.5 + size * 0.4), 0.5)
+		shake((1 - distance / reach) * (1.5 + size * 0.45), 0.5)
+	end
+	if distance > 400 then
+		return
+	end
+
+	ring(position + Vector3.new(0, 0.3, 0), color, 2, size * 9, 0.7)
+	ring(position + Vector3.new(0, 0.4, 0), Color3.fromRGB(255, 200, 120), 1, size * 5, 0.45)
+	flash(position + Vector3.new(0, 4, 0), color, size * 10, 6, 0.8)
+	burst(position + Vector3.new(0, 1, 0), color, 25 + size * 4, 0.9, 30)
+
+	-- Dust cloud
+	local dust = burst(position + Vector3.new(0, 1, 0), Color3.fromRGB(150, 130, 150), 14, size * 1.6, 12, SMOKE)
+	local emitter = dust:FindFirstChildOfClass("ParticleEmitter")
+	if emitter then
+		emitter.LightEmission = 0
+		emitter.Transparency = NumberSequence.new(0.4, 1)
+		emitter.Lifetime = NumberRange.new(1.2, 2)
+	end
+
+	-- Flying rocks
+	for _ = 1, math.floor(5 + size) do
+		local s = math.random() * 1.2 + 0.5
+		local rock = localPart({
+			Size = Vector3.new(s, s * 0.8, s),
+			Position = position + Vector3.new(math.random(-2, 2), 2, math.random(-2, 2)),
+			Material = Enum.Material.Basalt,
+			Color = Color3.fromRGB(60, 50, 50),
+			Anchored = false,
+			CanCollide = true,
+		})
+		local direction = Vector3.new(math.random() - 0.5, 0, math.random() - 0.5)
+		if direction.Magnitude < 0.05 then
+			direction = Vector3.new(1, 0, 0)
+		end
+		rock.AssemblyLinearVelocity = direction.Unit * math.random(20, 45) + Vector3.new(0, math.random(35, 60), 0)
+		rock.AssemblyAngularVelocity = Vector3.new(math.random(-10, 10), math.random(-10, 10), math.random(-10, 10))
+		TweenService:Create(rock, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 1.6), {
+			Transparency = 1,
+		}):Play()
+		Debris:AddItem(rock, 2.8)
+	end
+end
+
+function HANDLERS.HatchFX(position, color, rarityIndex)
+	if distanceTo(position) > 300 then
+		return
+	end
+	rarityIndex = rarityIndex or 1
+	burst(position, color, 20 + rarityIndex * 8, 1 + rarityIndex * 0.15, 20)
+	ring(position - Vector3.new(0, 1.5, 0), color, 2, 10 + rarityIndex * 2, 0.6)
+	flash(position, color, 18 + rarityIndex * 4, 5, 1)
+	if rarityIndex >= 5 then
+		local pillar = localPart({
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(120, 3, 3),
+			CFrame = CFrame.new(position + Vector3.new(0, 58, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+			Material = Enum.Material.Neon,
+			Color = color,
+			Transparency = 0.2,
+		})
+		TweenService:Create(pillar, TweenInfo.new(1.6, Enum.EasingStyle.Quad), {
+			Size = Vector3.new(120, 10, 10),
+			Transparency = 1,
+		}):Play()
+		Debris:AddItem(pillar, 1.7)
 	end
 end
 
 function HANDLERS.Collect(amount)
-	UI.FloatText("+" .. Util.FormatMoney(amount), Color3.fromRGB(120, 255, 120), false)
+	UI.FloatText("+" .. Util.FormatMoney(amount), Color3.fromRGB(130, 255, 130), false)
+	UI.CoinBurst()
 	play("Collect", 0.4)
 end
 
 function HANDLERS.Speed(gain)
-	UI.FloatText("+" .. gain .. " ⚡", Color3.fromRGB(120, 220, 255), true)
+	UI.FloatText("+" .. gain .. " ⚡", Color3.fromRGB(130, 225, 255), true)
 end
 
 function HANDLERS.Grab()
@@ -3948,17 +4729,17 @@ end
 function HANDLERS.Deposit()
 	play("Deposit", 0.35)
 	UI.Popup("Delivered! ☄️", Color3.fromRGB(120, 255, 160))
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if root then
+		burst(root.Position + Vector3.new(0, 3, 0), Color3.fromRGB(120, 255, 160), 25, 1, 16)
+	end
 end
 
 function HANDLERS.Hatch(id, rarityName, mutation)
-	local rarity = Util.GetRarity(rarityName)
 	local rarityIndex = Config.RarityIndex[rarityName] or 1
-	if rarityIndex >= 4 or mutation then
-		local text = "🐣 " .. id .. "!"
-		if mutation then
-			text = "🐣 " .. string.upper(mutation) .. " " .. id .. "!"
-		end
-		UI.Popup(text, rarity.Color)
+	if rarityIndex >= 3 or mutation then
+		UI.HatchCard(id, rarityName, mutation)
 		play("Hatch", 0.5)
 		if rarityIndex >= 6 then
 			shake(2, 0.6)
@@ -3967,10 +4748,11 @@ function HANDLERS.Hatch(id, rarityName, mutation)
 end
 
 function HANDLERS.Discovered(id, rarityName)
-	-- Wait for the hatch popup to finish first
-	task.delay(1.8, function()
-		UI.Popup("📖 NEW: " .. id, Util.GetRarity(rarityName).Color)
-	end)
+	if not UI.MarkNew(id) then
+		task.delay(0.3, function()
+			UI.Popup("📖 NEW: " .. id, Util.GetRarity(rarityName).Color)
+		end)
+	end
 end
 
 function HANDLERS.Alarm()
@@ -3997,8 +4779,10 @@ local function onKnockback(velocity, stunTime)
 	end
 	humanoid.PlatformStand = true
 	root.AssemblyLinearVelocity = velocity
+	root.AssemblyAngularVelocity = Vector3.new(math.random(-6, 6), 0, math.random(-6, 6))
 	play("Ouch", 0.6)
-	shake(2.5, 0.35)
+	shake(3, 0.4)
+	UI.Flash(Color3.fromRGB(255, 255, 255))
 	task.delay(stunTime or 0.8, function()
 		if humanoid.Parent and humanoid.Health > 0 then
 			humanoid.PlatformStand = false
@@ -4009,6 +4793,10 @@ end
 
 function Effects.Init(ui)
 	UI = ui
+	fxFolder = Instance.new("Folder")
+	fxFolder.Name = "LocalFX"
+	fxFolder.Parent = workspace
+
 	for name, id in SOUND_IDS do
 		local sound = Instance.new("Sound")
 		sound.Name = "Fx_" .. name
@@ -4032,15 +4820,17 @@ return Effects
 ]]></ProtectedString>
 						</Properties>
 					</Item>
-					<Item class="ModuleScript" referent="RBXCEAB54448F5E424FBAB3011A6B876319">
+					<Item class="ModuleScript" referent="RBX71693B42DA5D470EB3B7D77E0B98C89A">
 						<Properties>
 							<string name="Name">UI</string>
-							<ProtectedString name="Source"><![CDATA[-- UI: the whole HUD built in code. Cash, speed, side menu, Shop / Index / Rebirth
--- panels, toasts, event banner and popups. Works on PC and mobile (auto scale).
+							<ProtectedString name="Source"><![CDATA[-- UI: the whole HUD built in code.
+-- Glossy buttons with hover/press animations, animated panels with background blur,
+-- 3D Meteorlings in the Index and in the hatch card, notification badges, toasts, banners.
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
@@ -4048,6 +4838,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
+local Visuals = require(Shared.Visuals)
 
 local player = Players.LocalPlayer
 
@@ -4055,22 +4846,35 @@ local UI = {}
 
 local FONT = Enum.Font.FredokaOne
 local WHITE = Color3.new(1, 1, 1)
-local DARK = Color3.fromRGB(24, 22, 38)
+local BLACK = Color3.new(0, 0, 0)
+local PANEL_TOP = Color3.fromRGB(46, 40, 78)
+local PANEL_BOTTOM = Color3.fromRGB(24, 20, 44)
 local GREEN = Color3.fromRGB(70, 210, 100)
-local RED = Color3.fromRGB(240, 80, 80)
+local RED = Color3.fromRGB(240, 80, 90)
+local GOLD = Color3.fromRGB(255, 200, 60)
+local GREY = Color3.fromRGB(110, 110, 130)
 
 local PRODUCT_ORDER = { "SpeedBoost", "InstantHatch", "Luck", "MeteorShower", "GoldenComet" }
+local PRODUCT_ICONS = { SpeedBoost = "⚡", InstantHatch = "🐣", Luck = "🍀", MeteorShower = "☄️", GoldenComet = "🌟" }
 local PASS_ORDER = { "DoubleMoney", "DoubleSpeed", "VIP", "AutoCollect", "BigHammer" }
+local PASS_ICONS = { DoubleMoney = "💰", DoubleSpeed = "👟", VIP = "⭐", AutoCollect = "🧲", BigHammer = "🔨" }
+
+local TWEEN_FAST = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local TWEEN_POP = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
 local state = nil
 local gui
 local scales = {}
 local refs = {}
 local panels = {}
+local openPanel = nil
+local blur
 local toastOrder = 0
-local clickSound
+local clickSound, hoverSound
+local hatchToken = 0
+local currentHatchId = nil
 
--- Helpers ---------------------------------------------------------------------
+-- Base helpers ------------------------------------------------------------------
 
 local function create(className, props, children)
 	local inst = Instance.new(className)
@@ -4095,55 +4899,46 @@ local function corner(radius)
 	return create("UICorner", { CornerRadius = UDim.new(0, radius or 12) })
 end
 
-local function stroke(color, thickness)
+local function round()
+	return create("UICorner", { CornerRadius = UDim.new(1, 0) })
+end
+
+local function stroke(color, thickness, transparency)
 	return create("UIStroke", {
-		Color = color or Color3.new(0, 0, 0),
+		Color = color or BLACK,
 		Thickness = thickness or 2,
+		Transparency = transparency or 0,
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 	})
 end
 
-local function gradient(top, bottom)
-	return create("UIGradient", { Color = ColorSequence.new(top, bottom), Rotation = 90 })
+local function gradient(top, bottom, rotation)
+	return create("UIGradient", { Color = ColorSequence.new(top, bottom), Rotation = rotation or 90 })
 end
 
-local function label(props)
+local function textStroke(thickness)
+	return create("UIStroke", {
+		Color = BLACK,
+		Thickness = thickness or 2,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+	})
+end
+
+local function label(props, outline)
 	local defaults = {
 		BackgroundTransparency = 1,
 		Font = FONT,
 		TextScaled = true,
 		TextColor3 = WHITE,
-		TextStrokeTransparency = 0.3,
 	}
 	for key, value in props do
 		defaults[key] = value
 	end
-	return create("TextLabel", defaults)
-end
-
-local function button(props, color)
-	local defaults = {
-		BackgroundColor3 = color or GREEN,
-		Font = FONT,
-		TextScaled = true,
-		TextColor3 = WHITE,
-		TextStrokeTransparency = 0.3,
-		AutoButtonColor = true,
-	}
-	for key, value in props do
-		defaults[key] = value
+	local children = nil
+	if outline ~= false then
+		children = { textStroke(outline or 2) }
 	end
-	local btn = create("TextButton", defaults, {
-		corner(10),
-		stroke(Color3.new(0, 0, 0), 2),
-		create("UIPadding", {
-			PaddingLeft = UDim.new(0, 6),
-			PaddingRight = UDim.new(0, 6),
-			PaddingTop = UDim.new(0, 4),
-			PaddingBottom = UDim.new(0, 4),
-		}),
-	})
-	return btn
+	return create("TextLabel", defaults, children)
 end
 
 local function scaled(frame)
@@ -4170,6 +4965,95 @@ local function playClick()
 	end
 end
 
+-- Glossy button: wrapper (shadow + button) with hover / press scale animation.
+-- Returns wrapper, button.
+local function fancyButton(props, color)
+	color = color or GREEN
+	local wrapper = create("Frame", {
+		Name = props.Name or "ButtonWrap",
+		AnchorPoint = props.AnchorPoint or Vector2.new(0, 0),
+		Position = props.Position or UDim2.new(),
+		Size = props.Size or UDim2.fromOffset(140, 50),
+		LayoutOrder = props.LayoutOrder or 0,
+		BackgroundTransparency = 1,
+		Parent = props.Parent,
+	})
+	local pop = create("UIScale", { Name = "Pop", Parent = wrapper })
+	create("Frame", {
+		Name = "Shadow",
+		Position = UDim2.fromOffset(0, 5),
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = BLACK,
+		BackgroundTransparency = 0.55,
+		Parent = wrapper,
+	}, { corner(14) })
+	local btn = create("TextButton", {
+		Name = "Button",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = WHITE,
+		AutoButtonColor = false,
+		Font = FONT,
+		Text = props.Text or "",
+		TextScaled = true,
+		TextColor3 = WHITE,
+		Parent = wrapper,
+	}, {
+		corner(14),
+		stroke(BLACK, 3),
+		textStroke(2),
+		gradient(color:Lerp(WHITE, 0.3), color:Lerp(BLACK, 0.15)),
+		create("UIPadding", {
+			PaddingLeft = UDim.new(0, 8),
+			PaddingRight = UDim.new(0, 8),
+			PaddingTop = UDim.new(0, 6),
+			PaddingBottom = UDim.new(0, 6),
+		}),
+	})
+	-- Glossy shine on the top half
+	create("Frame", {
+		Name = "Shine",
+		Position = UDim2.new(0, -4, 0, -3),
+		Size = UDim2.new(1, 8, 0.45, 0),
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 0.8,
+		Parent = btn,
+	}, { corner(10) })
+
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(pop, TWEEN_FAST, { Scale = 1.06 }):Play()
+		if hoverSound then
+			hoverSound:Play()
+		end
+	end)
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(pop, TWEEN_FAST, { Scale = 1 }):Play()
+	end)
+	btn.MouseButton1Down:Connect(function()
+		TweenService:Create(pop, TWEEN_FAST, { Scale = 0.92 }):Play()
+	end)
+	btn.MouseButton1Up:Connect(function()
+		TweenService:Create(pop, TWEEN_POP, { Scale = 1 }):Play()
+	end)
+	btn:SetAttribute("Color", color)
+	return wrapper, btn
+end
+
+local function setButtonColor(btn, color)
+	local grad = btn:FindFirstChildOfClass("UIGradient")
+	if grad then
+		grad.Color = ColorSequence.new(color:Lerp(WHITE, 0.3), color:Lerp(BLACK, 0.15))
+	end
+end
+
+local function setButton(btn, text, enabled, color)
+	btn.Text = text
+	if enabled then
+		setButtonColor(btn, color or btn:GetAttribute("Color") or GREEN)
+	else
+		setButtonColor(btn, GREY)
+	end
+end
+
 local function request(action)
 	playClick()
 	local ok, response = pcall(function()
@@ -4193,7 +5077,7 @@ local function promptPurchase(kind, key)
 		entry = Config.Products[key]
 	end
 	if not entry or entry.Id == 0 then
-		UI.Toast("Coming soon!", Color3.fromRGB(255, 200, 90))
+		UI.Toast("Coming soon!", GOLD)
 		return
 	end
 	if kind == "Pass" then
@@ -4203,125 +5087,234 @@ local function promptPurchase(kind, key)
 	end
 end
 
--- Top bar ---------------------------------------------------------------------
+-- 3D Meteorling inside a ViewportFrame
+local function viewportModel(parent, id)
+	local viewport = create("ViewportFrame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Ambient = Color3.fromRGB(170, 165, 200),
+		LightColor = WHITE,
+		LightDirection = Vector3.new(-1, -1.2, 1),
+		Parent = parent,
+	})
+	local model = Visuals.CreatureModel({ id = id, hatched = true }, false, true)
+	model:PivotTo(CFrame.new())
+	model.Parent = viewport
+	local extents = model:GetExtentsSize()
+	local radius = math.max(extents.X, extents.Y, extents.Z)
+	local camera = Instance.new("Camera")
+	camera.FieldOfView = 35
+	local eye = Vector3.new(radius * 0.55, radius * 0.25, -radius * 1.75)
+	camera.CFrame = CFrame.lookAt(eye, Vector3.new(0, radius * 0.08, 0))
+	camera.Parent = viewport
+	viewport.CurrentCamera = camera
+	return viewport, model
+end
+
+-- Blur behind open panels
+local function setBlur(on)
+	if not blur then
+		return
+	end
+	local size = 0
+	if on then
+		size = 14
+	end
+	TweenService:Create(blur, TweenInfo.new(0.25), { Size = size }):Play()
+end
+
+-- Top bar -------------------------------------------------------------------------
 
 local function buildTopBar()
 	local top = scaled(create("Frame", {
 		Name = "TopBar",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 6),
-		Size = UDim2.fromOffset(340, 124),
+		Position = UDim2.new(0.5, 0, 0, 8),
+		Size = UDim2.fromOffset(380, 130),
 		BackgroundTransparency = 1,
 		Parent = gui,
 	}))
+	refs.TopBar = top
 
+	-- Cash pill
+	create("Frame", {
+		Name = "CashShadow",
+		Position = UDim2.fromOffset(0, 5),
+		Size = UDim2.new(1, 0, 0, 74),
+		BackgroundColor3 = BLACK,
+		BackgroundTransparency = 0.55,
+		Parent = top,
+	}, { corner(37) })
 	local cash = create("Frame", {
 		Name = "Cash",
-		Size = UDim2.new(1, 0, 0, 72),
+		Size = UDim2.new(1, 0, 0, 74),
 		BackgroundColor3 = WHITE,
 		Parent = top,
 	}, {
-		corner(16),
-		stroke(Color3.fromRGB(60, 40, 0), 3),
-		gradient(Color3.fromRGB(255, 225, 110), Color3.fromRGB(240, 160, 30)),
+		corner(37),
+		stroke(Color3.fromRGB(90, 55, 0), 3),
+		gradient(Color3.fromRGB(255, 232, 120), Color3.fromRGB(245, 160, 30)),
 	})
+	create("Frame", {
+		Name = "Shine",
+		Position = UDim2.new(0, 12, 0, 4),
+		Size = UDim2.new(1, -24, 0, 26),
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 0.7,
+		Parent = cash,
+	}, { corner(13) })
+	local coin = create("Frame", {
+		Name = "Coin",
+		Position = UDim2.fromOffset(8, 7),
+		Size = UDim2.fromOffset(60, 60),
+		BackgroundColor3 = WHITE,
+		Parent = cash,
+	}, {
+		round(),
+		stroke(Color3.fromRGB(120, 70, 0), 3),
+		gradient(Color3.fromRGB(255, 240, 150), Color3.fromRGB(230, 140, 20)),
+	})
+	label({ Size = UDim2.fromScale(1, 1), Text = "$", Parent = coin }, 3)
+	refs.Coin = coin
 	refs.Money = label({
 		Name = "Money",
-		Position = UDim2.new(0, 10, 0, 4),
-		Size = UDim2.new(1, -20, 0, 42),
+		Position = UDim2.new(0, 76, 0, 4),
+		Size = UDim2.new(1, -92, 0, 42),
 		Text = "$0",
-		TextStrokeTransparency = 0,
+		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = cash,
-	})
+	}, 3)
 	refs.Income = label({
 		Name = "Income",
-		Position = UDim2.new(0, 10, 0, 44),
-		Size = UDim2.new(1, -20, 0, 24),
+		Position = UDim2.new(0, 78, 0, 44),
+		Size = UDim2.new(1, -92, 0, 24),
 		Text = "+$0/s",
-		TextColor3 = Color3.fromRGB(255, 255, 230),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(255, 255, 220),
 		Parent = cash,
-	})
+	}, 2)
 
+	-- Speed bar
 	local speed = create("Frame", {
 		Name = "Speed",
-		Position = UDim2.new(0, 0, 0, 80),
-		Size = UDim2.new(1, 0, 0, 40),
-		BackgroundColor3 = DARK,
-		BackgroundTransparency = 0.15,
+		Position = UDim2.new(0, 24, 0, 86),
+		Size = UDim2.new(1, -48, 0, 36),
+		BackgroundColor3 = Color3.fromRGB(20, 18, 40),
+		BackgroundTransparency = 0.1,
 		ClipsDescendants = true,
 		Parent = top,
 	}, {
-		corner(12),
-		stroke(Color3.fromRGB(60, 200, 255), 2),
+		round(),
+		stroke(BLACK, 3),
 	})
-	refs.SpeedFill = create("Frame", {
+	local fill = create("Frame", {
 		Name = "Fill",
-		Size = UDim2.fromScale(0, 1),
-		BackgroundColor3 = Color3.fromRGB(60, 200, 255),
-		BackgroundTransparency = 0.35,
+		Size = UDim2.fromScale(0.05, 1),
+		BackgroundColor3 = WHITE,
 		Parent = speed,
-	}, { corner(12) })
+	}, {
+		round(),
+		gradient(Color3.fromRGB(70, 220, 255), Color3.fromRGB(170, 90, 255), 0),
+	})
+	-- Moving shine across the fill
+	local shimmer = create("UIGradient", {
+		Color = ColorSequence.new(WHITE),
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.42, 1),
+			NumberSequenceKeypoint.new(0.5, 0.45),
+			NumberSequenceKeypoint.new(0.58, 1),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+		Offset = Vector2.new(-1, 0),
+	})
+	create("Frame", {
+		Name = "Shimmer",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = WHITE,
+		Parent = fill,
+	}, { round(), shimmer })
+	TweenService:Create(shimmer, TweenInfo.new(1.6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {
+		Offset = Vector2.new(1, 0),
+	}):Play()
+	refs.SpeedFill = fill
 	refs.Speed = label({
 		Name = "SpeedText",
-		Position = UDim2.new(0, 8, 0, 4),
-		Size = UDim2.new(1, -16, 1, -8),
+		Position = UDim2.new(0, 10, 0, 4),
+		Size = UDim2.new(1, -20, 1, -8),
 		Text = "⚡ 16 Speed",
-		ZIndex = 2,
+		ZIndex = 3,
 		Parent = speed,
-	})
-	refs.TopBar = top
+	}, 2)
 end
 
 -- Left menu -------------------------------------------------------------------
+
+local function badge(parent)
+	local b = create("Frame", {
+		Name = "Badge",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -6, 0, 6),
+		Size = UDim2.fromOffset(28, 28),
+		BackgroundColor3 = RED,
+		Visible = false,
+		ZIndex = 5,
+		Parent = parent,
+	}, {
+		round(),
+		stroke(WHITE, 2),
+	})
+	label({ Size = UDim2.fromScale(1, 1), Text = "!", ZIndex = 6, Parent = b }, 1)
+	local s = create("UIScale", { Parent = b })
+	TweenService:Create(s, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		Scale = 1.2,
+	}):Play()
+	return b
+end
 
 local function buildMenu()
 	local menu = scaled(create("Frame", {
 		Name = "Menu",
 		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 10, 0.5, 0),
-		Size = UDim2.fromOffset(92, 300),
+		Position = UDim2.new(0, 12, 0.5, 0),
+		Size = UDim2.fromOffset(96, 340),
 		BackgroundTransparency = 1,
 		Parent = gui,
 	}, {
 		create("UIListLayout", {
-			Padding = UDim.new(0, 10),
+			Padding = UDim.new(0, 14),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			VerticalAlignment = Enum.VerticalAlignment.Center,
 		}),
 	}))
 
 	local entries = {
-		{ Name = "Shop", Icon = "🛒", Color = Color3.fromRGB(70, 200, 100) },
-		{ Name = "Index", Icon = "📖", Color = Color3.fromRGB(70, 150, 255) },
-		{ Name = "Rebirth", Icon = "🌟", Color = Color3.fromRGB(170, 90, 255) },
+		{ Name = "Shop", Icon = "🛒", Color = Color3.fromRGB(60, 205, 95) },
+		{ Name = "Index", Icon = "📖", Color = Color3.fromRGB(70, 145, 255) },
+		{ Name = "Rebirth", Icon = "🌟", Color = Color3.fromRGB(175, 90, 255) },
 	}
+	refs.Badges = {}
 	for i, entry in entries do
-		local btn = create("TextButton", {
+		local wrapper, btn = fancyButton({
 			Name = entry.Name,
 			LayoutOrder = i,
-			Size = UDim2.fromOffset(88, 88),
-			BackgroundColor3 = WHITE,
+			Size = UDim2.fromOffset(92, 92),
 			Text = "",
-			AutoButtonColor = true,
 			Parent = menu,
-		}, {
-			corner(18),
-			stroke(Color3.new(0, 0, 0), 3),
-			gradient(entry.Color:Lerp(WHITE, 0.25), entry.Color),
-		})
+		}, entry.Color)
 		label({
-			Size = UDim2.new(1, 0, 0.62, 0),
+			Position = UDim2.new(0, 0, 0, -2),
+			Size = UDim2.new(1, 0, 0.66, 0),
 			Text = entry.Icon,
-			TextStrokeTransparency = 1,
 			Parent = btn,
-		})
+		}, false)
 		label({
-			Position = UDim2.new(0, 4, 0.6, 0),
-			Size = UDim2.new(1, -8, 0.34, 0),
+			Position = UDim2.new(0, 0, 0.62, 0),
+			Size = UDim2.new(1, 0, 0.36, 0),
 			Text = entry.Name,
-			TextStrokeTransparency = 0,
 			Parent = btn,
-		})
+		}, 2)
+		refs.Badges[entry.Name] = badge(wrapper)
 		btn.MouseButton1Click:Connect(function()
 			playClick()
 			UI.TogglePanel(entry.Name)
@@ -4335,52 +5328,62 @@ local function makePanel(name, title, color)
 	local panel = scaled(create("Frame", {
 		Name = name .. "Panel",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.52),
-		Size = UDim2.fromOffset(600, 440),
-		BackgroundColor3 = DARK,
+		Position = UDim2.fromScale(0.5, 0.53),
+		Size = UDim2.fromOffset(640, 460),
+		BackgroundColor3 = WHITE,
 		Visible = false,
 		Parent = gui,
 	}, {
-		corner(20),
-		stroke(color, 4),
+		corner(24),
+		stroke(BLACK, 4),
+		gradient(PANEL_TOP, PANEL_BOTTOM),
 	}))
+	local pop = create("UIScale", { Name = "Pop", Parent = panel })
+
 	local header = create("Frame", {
 		Name = "Header",
-		Size = UDim2.new(1, 0, 0, 56),
+		Size = UDim2.new(1, 0, 0, 64),
 		BackgroundColor3 = WHITE,
 		Parent = panel,
 	}, {
-		corner(20),
-		gradient(color:Lerp(WHITE, 0.2), color),
+		corner(24),
+		gradient(color:Lerp(WHITE, 0.25), color:Lerp(BLACK, 0.1)),
 	})
+	-- Square off the bottom corners of the header
+	create("Frame", {
+		Position = UDim2.new(0, 0, 1, -24),
+		Size = UDim2.new(1, 0, 0, 24),
+		BackgroundColor3 = WHITE,
+		BorderSizePixel = 0,
+		Parent = header,
+	}, { gradient(color:Lerp(WHITE, 0.12), color:Lerp(BLACK, 0.1)) })
 	label({
-		Position = UDim2.new(0, 20, 0, 8),
-		Size = UDim2.new(1, -100, 1, -16),
+		Position = UDim2.new(0, 22, 0, 10),
+		Size = UDim2.new(1, -110, 1, -20),
 		Text = title,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextStrokeTransparency = 0,
 		Parent = header,
-	})
-	local close = button({
-		Name = "Close",
+	}, 3)
+	local _, close = fancyButton({
 		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -10, 0.5, 0),
-		Size = UDim2.fromOffset(44, 44),
-		Text = "X",
+		Position = UDim2.new(1, -12, 0.5, -2),
+		Size = UDim2.fromOffset(48, 48),
+		Text = "✕",
 		Parent = header,
 	}, RED)
 	close.MouseButton1Click:Connect(function()
 		playClick()
-		panel.Visible = false
+		UI.TogglePanel(name)
 	end)
+
 	local content = create("Frame", {
 		Name = "Content",
-		Position = UDim2.new(0, 14, 0, 66),
-		Size = UDim2.new(1, -28, 1, -80),
+		Position = UDim2.new(0, 16, 0, 76),
+		Size = UDim2.new(1, -32, 1, -90),
 		BackgroundTransparency = 1,
 		Parent = panel,
 	})
-	panels[name] = panel
+	panels[name] = { Frame = panel, Pop = pop }
 	return content
 end
 
@@ -4390,53 +5393,73 @@ local function scrolling(parent)
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 8,
+		ScrollBarImageColor3 = Color3.fromRGB(180, 160, 255),
 		CanvasSize = UDim2.new(0, 0, 0, 0),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ScrollingDirection = Enum.ScrollingDirection.Y,
 		Parent = parent,
+	}, {
+		create("UIPadding", {
+			PaddingLeft = UDim.new(0, 4),
+			PaddingRight = UDim.new(0, 14),
+			PaddingTop = UDim.new(0, 6),
+			PaddingBottom = UDim.new(0, 12),
+		}),
 	})
 end
 
 local function sectionHeader(parent, order, text)
 	label({
 		LayoutOrder = order,
-		Size = UDim2.new(1, -12, 0, 30),
+		Size = UDim2.new(1, 0, 0, 32),
 		Text = text,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Color3.fromRGB(255, 220, 120),
 		Parent = parent,
-	})
+	}, 2)
 end
 
-local function shopRow(parent, order, title, description, buttonColor, onClick)
+local function shopRow(parent, order, icon, iconColor, title, description, buttonColor, onClick)
 	local row = create("Frame", {
 		LayoutOrder = order,
-		Size = UDim2.new(1, -12, 0, 70),
-		BackgroundColor3 = Color3.fromRGB(40, 36, 62),
+		Size = UDim2.new(1, 0, 0, 82),
+		BackgroundColor3 = WHITE,
 		Parent = parent,
 	}, {
-		corner(12),
+		corner(16),
+		stroke(BLACK, 2, 0.3),
+		gradient(Color3.fromRGB(66, 58, 104), Color3.fromRGB(44, 38, 72)),
 	})
+	local iconFrame = create("Frame", {
+		Position = UDim2.fromOffset(10, 11),
+		Size = UDim2.fromOffset(60, 60),
+		BackgroundColor3 = WHITE,
+		Parent = row,
+	}, {
+		corner(14),
+		stroke(BLACK, 2),
+		gradient(iconColor:Lerp(WHITE, 0.3), iconColor:Lerp(BLACK, 0.2)),
+	})
+	label({ Size = UDim2.fromScale(1, 1), Text = icon, Parent = iconFrame }, false)
 	local titleLabel = label({
-		Position = UDim2.new(0, 12, 0, 6),
-		Size = UDim2.new(1, -170, 0, 30),
+		Position = UDim2.new(0, 82, 0, 10),
+		Size = UDim2.new(1, -250, 0, 30),
 		Text = title,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = row,
-	})
+	}, 2)
 	local descLabel = label({
-		Position = UDim2.new(0, 12, 0, 38),
-		Size = UDim2.new(1, -170, 0, 24),
+		Position = UDim2.new(0, 82, 0, 44),
+		Size = UDim2.new(1, -250, 0, 24),
 		Text = description,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Color3.fromRGB(200, 200, 220),
-		TextStrokeTransparency = 1,
+		TextColor3 = Color3.fromRGB(200, 195, 230),
 		Parent = row,
-	})
-	local btn = button({
+	}, false)
+	local _, btn = fancyButton({
 		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -10, 0.5, 0),
-		Size = UDim2.fromOffset(140, 50),
+		Position = UDim2.new(1, -12, 0.5, -2),
+		Size = UDim2.fromOffset(150, 54),
 		Text = "...",
 		Parent = row,
 	}, buttonColor)
@@ -4445,13 +5468,9 @@ local function shopRow(parent, order, title, description, buttonColor, onClick)
 end
 
 local function buildShop()
-	local content = makePanel("Shop", "🛒 Shop", Color3.fromRGB(70, 200, 100))
+	local content = makePanel("Shop", "🛒 Shop", Color3.fromRGB(60, 205, 95))
 	local scroll = scrolling(content)
-	create("UIListLayout", {
-		Padding = UDim.new(0, 8),
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Parent = scroll,
-	})
+	create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = scroll })
 
 	local order = 0
 	local function nextOrder()
@@ -4459,56 +5478,74 @@ local function buildShop()
 		return order
 	end
 
-	sectionHeader(scroll, nextOrder(), "Upgrades (cash)")
-	refs.BootsRow = shopRow(scroll, nextOrder(), "Speed Boots", "", GREEN, function()
+	sectionHeader(scroll, nextOrder(), "⬆️ Upgrades")
+	refs.BootsRow = shopRow(scroll, nextOrder(), "👟", Color3.fromRGB(70, 200, 255), "Speed Boots", "", GREEN, function()
 		request("BuyBoots")
 	end)
-	refs.PedestalRow = shopRow(scroll, nextOrder(), "Extra Pedestal", "", GREEN, function()
+	refs.PedestalRow = shopRow(scroll, nextOrder(), "🏛️", Color3.fromRGB(220, 220, 240), "Extra Pedestal", "", GREEN, function()
 		request("BuyPedestal")
 	end)
 
-	sectionHeader(scroll, nextOrder(), "Boosts (Robux)")
+	sectionHeader(scroll, nextOrder(), "🚀 Boosts")
 	for _, key in PRODUCT_ORDER do
 		local product = Config.Products[key]
-		local row = shopRow(scroll, nextOrder(), product.Name, product.Description, Color3.fromRGB(0, 170, 90), function()
-			promptPurchase("Product", key)
-		end)
+		local row = shopRow(
+			scroll,
+			nextOrder(),
+			PRODUCT_ICONS[key] or "⭐",
+			Color3.fromRGB(255, 160, 60),
+			product.Name,
+			product.Description,
+			Color3.fromRGB(0, 180, 110),
+			function()
+				promptPurchase("Product", key)
+			end
+		)
 		row.Button.Text = "R$ " .. product.Price
 	end
 
-	sectionHeader(scroll, nextOrder(), "Game Passes (forever)")
+	sectionHeader(scroll, nextOrder(), "💎 Game Passes")
 	refs.PassRows = {}
 	for _, key in PASS_ORDER do
 		local pass = Config.GamePasses[key]
-		local row = shopRow(scroll, nextOrder(), pass.Name, pass.Description, Color3.fromRGB(255, 170, 40), function()
-			if state and state.Passes and state.Passes[key] then
-				return
+		local row = shopRow(
+			scroll,
+			nextOrder(),
+			PASS_ICONS[key] or "⭐",
+			GOLD,
+			pass.Name,
+			pass.Description,
+			Color3.fromRGB(255, 165, 30),
+			function()
+				if state and state.Passes and state.Passes[key] then
+					return
+				end
+				promptPurchase("Pass", key)
 			end
-			promptPurchase("Pass", key)
-		end)
+		)
 		row.Button.Text = "R$ " .. pass.Price
 		refs.PassRows[key] = row
 	end
 end
 
 local function buildIndex()
-	local content = makePanel("Index", "📖 Meteorling Index", Color3.fromRGB(70, 150, 255))
+	local content = makePanel("Index", "📖 Meteorling Index", Color3.fromRGB(70, 145, 255))
 	refs.IndexHeader = label({
 		Size = UDim2.new(1, 0, 0, 30),
 		Text = "Discovered 0/" .. #Config.Meteorlings,
 		TextColor3 = Color3.fromRGB(180, 220, 255),
 		Parent = content,
-	})
+	}, 2)
 	local holder = create("Frame", {
-		Position = UDim2.new(0, 0, 0, 36),
-		Size = UDim2.new(1, 0, 1, -36),
+		Position = UDim2.new(0, 0, 0, 38),
+		Size = UDim2.new(1, 0, 1, -38),
 		BackgroundTransparency = 1,
 		Parent = content,
 	})
 	local scroll = scrolling(holder)
 	create("UIGridLayout", {
-		CellSize = UDim2.fromOffset(126, 136),
-		CellPadding = UDim2.fromOffset(8, 8),
+		CellSize = UDim2.fromOffset(134, 168),
+		CellPadding = UDim2.fromOffset(10, 10),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = scroll,
 	})
@@ -4518,107 +5555,149 @@ local function buildIndex()
 		local rarity = Util.GetRarity(info.Rarity)
 		local card = create("Frame", {
 			LayoutOrder = i,
-			BackgroundColor3 = Color3.fromRGB(40, 36, 62),
+			BackgroundColor3 = WHITE,
 			Parent = scroll,
 		}, {
-			corner(12),
-			stroke(rarity.Color, 2),
+			corner(16),
+			stroke(rarity.Color, 3),
+			gradient(rarity.Color:Lerp(PANEL_TOP, 0.55), PANEL_BOTTOM),
 		})
-		local circle = create("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0),
-			Position = UDim2.new(0.5, 0, 0, 8),
-			Size = UDim2.fromOffset(56, 56),
-			BackgroundColor3 = Color3.fromRGB(10, 10, 14),
+		local view = create("Frame", {
+			Position = UDim2.fromOffset(6, 6),
+			Size = UDim2.new(1, -12, 0, 96),
+			BackgroundTransparency = 1,
 			Parent = card,
-		}, {
-			create("UICorner", { CornerRadius = UDim.new(1, 0) }),
-			stroke(Color3.new(0, 0, 0), 2),
 		})
+		local viewport = viewportModel(view, info.Id)
+		viewport.ImageColor3 = BLACK
+		viewport.ImageTransparency = 0.25
 		local name = label({
-			Position = UDim2.new(0, 4, 0, 68),
+			Position = UDim2.new(0, 4, 0, 104),
 			Size = UDim2.new(1, -8, 0, 22),
 			Text = "???",
 			Parent = card,
-		})
+		}, 2)
 		label({
-			Position = UDim2.new(0, 4, 0, 90),
+			Position = UDim2.new(0, 4, 0, 126),
 			Size = UDim2.new(1, -8, 0, 18),
 			Text = info.Rarity,
 			TextColor3 = rarity.Color,
 			Parent = card,
-		})
+		}, 2)
 		local income = label({
-			Position = UDim2.new(0, 4, 0, 110),
-			Size = UDim2.new(1, -8, 0, 18),
+			Position = UDim2.new(0, 4, 0, 145),
+			Size = UDim2.new(1, -8, 0, 17),
 			Text = "",
 			TextColor3 = Color3.fromRGB(140, 255, 140),
 			Parent = card,
-		})
-		refs.IndexCards[info.Id] = { Circle = circle, Name = name, Income = income, Info = info }
+		}, 2)
+		refs.IndexCards[info.Id] = { Viewport = viewport, Name = name, Income = income, Info = info }
 	end
 end
 
 local function buildRebirth()
-	local content = makePanel("Rebirth", "🌟 Rebirth", Color3.fromRGB(170, 90, 255))
+	local content = makePanel("Rebirth", "🌟 Rebirth", Color3.fromRGB(175, 90, 255))
+	local star = label({
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 0),
+		Size = UDim2.fromOffset(90, 80),
+		Text = "🌟",
+		Parent = content,
+	}, false)
+	TweenService:Create(star, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		Rotation = 12,
+	}):Play()
 	refs.RebirthCount = label({
-		Size = UDim2.new(1, 0, 0, 44),
+		Position = UDim2.new(0, 0, 0, 80),
+		Size = UDim2.new(1, 0, 0, 40),
 		Text = "Rebirths: 0",
 		Parent = content,
-	})
+	}, 3)
 	refs.RebirthMult = label({
-		Position = UDim2.new(0, 0, 0, 52),
-		Size = UDim2.new(1, 0, 0, 36),
+		Position = UDim2.new(0, 0, 0, 124),
+		Size = UDim2.new(1, 0, 0, 32),
 		Text = "Income x1 → x1.5",
 		TextColor3 = Color3.fromRGB(140, 255, 140),
 		Parent = content,
-	})
+	}, 2)
 	refs.RebirthCost = label({
-		Position = UDim2.new(0, 0, 0, 96),
-		Size = UDim2.new(1, 0, 0, 34),
+		Position = UDim2.new(0, 0, 0, 160),
+		Size = UDim2.new(1, 0, 0, 30),
 		Text = "Cost: $0",
 		TextColor3 = Color3.fromRGB(255, 220, 120),
 		Parent = content,
-	})
+	}, 2)
 	local bar = create("Frame", {
-		Position = UDim2.new(0.1, 0, 0, 140),
-		Size = UDim2.new(0.8, 0, 0, 26),
-		BackgroundColor3 = Color3.fromRGB(40, 36, 62),
+		Position = UDim2.new(0.1, 0, 0, 198),
+		Size = UDim2.new(0.8, 0, 0, 28),
+		BackgroundColor3 = Color3.fromRGB(20, 18, 40),
 		ClipsDescendants = true,
 		Parent = content,
-	}, { corner(10) })
+	}, { round(), stroke(BLACK, 3) })
 	refs.RebirthFill = create("Frame", {
 		Size = UDim2.fromScale(0, 1),
-		BackgroundColor3 = Color3.fromRGB(170, 90, 255),
+		BackgroundColor3 = WHITE,
 		Parent = bar,
-	}, { corner(10) })
+	}, { round(), gradient(Color3.fromRGB(220, 150, 255), Color3.fromRGB(140, 60, 240), 0) })
+	refs.RebirthPercent = label({
+		Size = UDim2.fromScale(1, 1),
+		Text = "0%",
+		ZIndex = 2,
+		Parent = bar,
+	}, 2)
 	label({
-		Position = UDim2.new(0, 0, 0, 176),
-		Size = UDim2.new(1, 0, 0, 50),
+		Position = UDim2.new(0, 0, 0, 234),
+		Size = UDim2.new(1, 0, 0, 44),
 		Text = "Resets cash, speed and boots.\nKeeps your Meteorlings and Index!",
-		TextColor3 = Color3.fromRGB(200, 200, 220),
-		TextStrokeTransparency = 1,
+		TextColor3 = Color3.fromRGB(200, 195, 230),
 		Parent = content,
-	})
-	refs.RebirthButton = button({
+	}, false)
+	local _, btn = fancyButton({
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -6),
-		Size = UDim2.fromOffset(260, 66),
+		Position = UDim2.new(0.5, 0, 1, -8),
+		Size = UDim2.fromOffset(280, 70),
 		Text = "REBIRTH",
 		Parent = content,
-	}, Color3.fromRGB(170, 90, 255))
-	refs.RebirthButton.MouseButton1Click:Connect(function()
+	}, Color3.fromRGB(175, 90, 255))
+	refs.RebirthButton = btn
+	btn.MouseButton1Click:Connect(function()
 		request("Rebirth")
 	end)
 end
 
--- Toasts, banner, popups, timers ---------------------------------------------
+-- Overlays: toasts, banner, timers, carry, popups, hatch card -----------------
+
+local function pill(props, color)
+	local frame = create("Frame", {
+		Name = props.Name,
+		AnchorPoint = props.AnchorPoint or Vector2.new(0, 0),
+		Position = props.Position or UDim2.new(),
+		Size = props.Size,
+		LayoutOrder = props.LayoutOrder or 0,
+		BackgroundColor3 = WHITE,
+		Visible = props.Visible ~= false,
+		Parent = props.Parent,
+	}, {
+		round(),
+		stroke(BLACK, 3),
+		gradient(color:Lerp(PANEL_TOP, 0.55), PANEL_BOTTOM),
+	})
+	local text = label({
+		Position = UDim2.new(0, 14, 0, 4),
+		Size = UDim2.new(1, -28, 1, -8),
+		Text = props.Text or "",
+		TextColor3 = props.TextColor or WHITE,
+		Parent = frame,
+	}, 2)
+	return frame, text
+end
 
 local function buildOverlay()
 	refs.Toasts = scaled(create("Frame", {
 		Name = "Toasts",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 140),
-		Size = UDim2.fromOffset(560, 240),
+		Position = UDim2.new(0.5, 0, 0, 150),
+		Size = UDim2.fromOffset(560, 260),
 		BackgroundTransparency = 1,
 		Parent = gui,
 	}, {
@@ -4629,146 +5708,300 @@ local function buildOverlay()
 		}),
 	}))
 
-	refs.Banner = scaled(create("Frame", {
+	-- Event banner
+	local banner = scaled(create("Frame", {
 		Name = "Banner",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0.22, 0),
-		Size = UDim2.fromOffset(720, 120),
-		BackgroundColor3 = DARK,
-		BackgroundTransparency = 0.15,
+		Position = UDim2.new(0.5, 0, 0.2, 0),
+		Size = UDim2.fromOffset(760, 130),
+		BackgroundColor3 = WHITE,
 		Visible = false,
 		Parent = gui,
 	}, {
-		corner(20),
-		stroke(Color3.fromRGB(255, 160, 60), 4),
+		corner(26),
+		stroke(BLACK, 4),
 	}))
+	refs.BannerGradient = gradient(Color3.fromRGB(255, 150, 60), Color3.fromRGB(120, 40, 160))
+	refs.BannerGradient.Parent = banner
+	refs.BannerPop = create("UIScale", { Name = "Pop", Parent = banner })
+	refs.Banner = banner
 	refs.BannerTitle = label({
-		Position = UDim2.new(0, 12, 0, 8),
-		Size = UDim2.new(1, -24, 0, 54),
+		Position = UDim2.new(0, 16, 0, 8),
+		Size = UDim2.new(1, -32, 0, 58),
 		Text = "",
-		TextStrokeTransparency = 0,
-		Parent = refs.Banner,
-	})
+		Parent = banner,
+	}, 3)
 	refs.BannerSub = label({
-		Position = UDim2.new(0, 12, 0, 64),
-		Size = UDim2.new(1, -24, 0, 26),
+		Position = UDim2.new(0, 16, 0, 68),
+		Size = UDim2.new(1, -32, 0, 28),
 		Text = "",
-		TextColor3 = Color3.fromRGB(230, 230, 240),
-		Parent = refs.Banner,
-	})
+		TextColor3 = Color3.fromRGB(255, 245, 230),
+		Parent = banner,
+	}, 2)
 	refs.BannerTimer = label({
-		Position = UDim2.new(0, 12, 0, 92),
-		Size = UDim2.new(1, -24, 0, 22),
+		Position = UDim2.new(0, 16, 0, 98),
+		Size = UDim2.new(1, -32, 0, 24),
 		Text = "",
-		TextColor3 = Color3.fromRGB(255, 220, 120),
-		Parent = refs.Banner,
-	})
+		TextColor3 = Color3.fromRGB(255, 230, 130),
+		Parent = banner,
+	}, 2)
 
+	-- Boost timers (top right)
 	refs.Timers = scaled(create("Frame", {
 		Name = "Timers",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -10, 0, 60),
-		Size = UDim2.fromOffset(240, 120),
+		Position = UDim2.new(1, -12, 0, 64),
+		Size = UDim2.fromOffset(250, 120),
 		BackgroundTransparency = 1,
 		Parent = gui,
 	}, {
 		create("UIListLayout", {
-			Padding = UDim.new(0, 6),
+			Padding = UDim.new(0, 8),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			HorizontalAlignment = Enum.HorizontalAlignment.Right,
 		}),
 	}))
-	local function timerLabel(order, color)
-		return label({
-			LayoutOrder = order,
-			Size = UDim2.fromOffset(240, 34),
-			BackgroundColor3 = DARK,
-			BackgroundTransparency = 0.25,
-			Text = "",
-			TextColor3 = color,
-			Visible = false,
-			Parent = refs.Timers,
-		})
-	end
-	refs.ShowerTimer = timerLabel(1, Color3.fromRGB(255, 160, 80))
-	refs.LuckTimer = timerLabel(2, Color3.fromRGB(120, 255, 140))
-	for _, timer in { refs.ShowerTimer, refs.LuckTimer } do
-		corner(10).Parent = timer
-	end
+	refs.ShowerTimer, refs.ShowerText = pill({
+		Name = "Shower",
+		Size = UDim2.fromOffset(240, 40),
+		LayoutOrder = 1,
+		Visible = false,
+		TextColor = Color3.fromRGB(255, 190, 110),
+		Parent = refs.Timers,
+	}, Color3.fromRGB(255, 140, 60))
+	refs.LuckTimer, refs.LuckText = pill({
+		Name = "Luck",
+		Size = UDim2.fromOffset(240, 40),
+		LayoutOrder = 2,
+		Visible = false,
+		TextColor = Color3.fromRGB(150, 255, 160),
+		Parent = refs.Timers,
+	}, Color3.fromRGB(80, 230, 110))
 
-	refs.Carry = scaled(label({
+	-- Carry status
+	local carry, carryText = pill({
 		Name = "Carry",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -96),
-		Size = UDim2.fromOffset(560, 44),
-		BackgroundColor3 = DARK,
-		BackgroundTransparency = 0.2,
-		Text = "",
+		Position = UDim2.new(0.5, 0, 1, -100),
+		Size = UDim2.fromOffset(600, 50),
 		Visible = false,
 		Parent = gui,
-	}))
-	corner(12).Parent = refs.Carry
+	}, Color3.fromRGB(90, 255, 140))
+	scaled(carry)
+	refs.Carry = carry
+	refs.CarryText = carryText
+	local carryPulse = create("UIScale", { Name = "Pulse", Parent = carryText })
+	TweenService:Create(carryPulse, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		Scale = 1.05,
+	}):Play()
 
+	-- Big text popup
 	refs.Popup = scaled(label({
 		Name = "Popup",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.4),
-		Size = UDim2.fromOffset(700, 90),
+		Position = UDim2.fromScale(0.5, 0.38),
+		Size = UDim2.fromOffset(720, 90),
 		Text = "",
-		TextStrokeTransparency = 0,
+		Visible = false,
+		Parent = gui,
+	}, 4))
+	refs.PopupPop = create("UIScale", { Name = "Pop", Parent = refs.Popup })
+
+	-- Hatch card with a spinning 3D Meteorling
+	local hatch = scaled(create("Frame", {
+		Name = "HatchCard",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.45),
+		Size = UDim2.fromOffset(340, 400),
+		BackgroundTransparency = 1,
 		Visible = false,
 		Parent = gui,
 	}))
+	refs.HatchPop = create("UIScale", { Name = "Pop", Parent = hatch })
+	local rays = create("Frame", {
+		Name = "Rays",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.4),
+		Size = UDim2.fromOffset(440, 440),
+		BackgroundTransparency = 1,
+		Parent = hatch,
+	})
+	for i = 0, 7 do
+		create("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.new(0, 46, 1, 0),
+			Rotation = i * 22.5,
+			BackgroundColor3 = WHITE,
+			BackgroundTransparency = 0.75,
+			BorderSizePixel = 0,
+			Parent = rays,
+		}, {
+			create("UIGradient", {
+				Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 1),
+					NumberSequenceKeypoint.new(0.5, 0),
+					NumberSequenceKeypoint.new(1, 1),
+				}),
+				Rotation = 90,
+			}),
+		})
+	end
+	refs.HatchRays = rays
+	local card = create("Frame", {
+		Name = "Card",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 30),
+		Size = UDim2.fromOffset(300, 360),
+		BackgroundColor3 = WHITE,
+		Parent = hatch,
+	}, {
+		corner(24),
+		stroke(BLACK, 4),
+	})
+	refs.HatchGradient = gradient(PANEL_TOP, PANEL_BOTTOM)
+	refs.HatchGradient.Parent = card
+	refs.HatchTitle = label({
+		Position = UDim2.new(0, 10, 0, 8),
+		Size = UDim2.new(1, -20, 0, 40),
+		Text = "HATCHED!",
+		Parent = card,
+	}, 3)
+	refs.HatchView = create("Frame", {
+		Position = UDim2.new(0, 20, 0, 50),
+		Size = UDim2.new(1, -40, 0, 190),
+		BackgroundTransparency = 1,
+		Parent = card,
+	})
+	refs.HatchName = label({
+		Position = UDim2.new(0, 10, 0, 244),
+		Size = UDim2.new(1, -20, 0, 38),
+		Text = "",
+		Parent = card,
+	}, 3)
+	refs.HatchRarity = label({
+		Position = UDim2.new(0, 10, 0, 284),
+		Size = UDim2.new(1, -20, 0, 28),
+		Text = "",
+		Parent = card,
+	}, 2)
+	refs.HatchIncome = label({
+		Position = UDim2.new(0, 10, 0, 316),
+		Size = UDim2.new(1, -20, 0, 28),
+		Text = "",
+		TextColor3 = Color3.fromRGB(140, 255, 140),
+		Parent = card,
+	}, 2)
+	local newBadge, newText = pill({
+		Name = "NewBadge",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -10, 0, 30),
+		Size = UDim2.fromOffset(110, 44),
+		Text = "NEW!",
+		Visible = false,
+		Parent = hatch,
+	}, RED)
+	newBadge.Rotation = 12
+	newText.TextColor3 = Color3.fromRGB(255, 255, 140)
+	refs.HatchNew = newBadge
+	refs.HatchNewPop = create("UIScale", { Parent = newBadge })
+	refs.Hatch = hatch
+
+	-- Coin burst layer
+	refs.Coins = create("Frame", {
+		Name = "Coins",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	})
+	refs.CoinPop = create("UIScale", { Parent = refs.Coin })
 
 	refs.Flash = create("Frame", {
 		Name = "Flash",
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = RED,
 		BackgroundTransparency = 1,
-		ZIndex = 50,
 		Active = false,
 		Parent = gui,
 	})
 end
+
+-- Public API -----------------------------------------------------------------------
 
 function UI.Toast(text, color)
 	if not refs.Toasts then
 		return
 	end
 	toastOrder += 1
-	local toast = label({
+	color = color or WHITE
+	local holder = create("Frame", {
 		LayoutOrder = toastOrder,
-		Size = UDim2.fromOffset(540, 34),
-		BackgroundColor3 = DARK,
-		BackgroundTransparency = 0.25,
-		Text = text,
-		TextColor3 = color or WHITE,
-		TextStrokeTransparency = 0,
+		Size = UDim2.fromOffset(540, 38),
+		BackgroundTransparency = 1,
 		Parent = refs.Toasts,
 	})
-	corner(10).Parent = toast
-	create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), Parent = toast })
+	local toast = create("Frame", {
+		Position = UDim2.fromOffset(0, -20),
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 1,
+		Parent = holder,
+	}, {
+		round(),
+		gradient(Color3.fromRGB(46, 40, 80), Color3.fromRGB(24, 20, 44)),
+	})
+	local accent = create("Frame", {
+		Position = UDim2.fromOffset(9, 9),
+		Size = UDim2.fromOffset(20, 20),
+		BackgroundColor3 = color,
+		BackgroundTransparency = 1,
+		Parent = toast,
+	}, { round() })
+	local textLabel = label({
+		Position = UDim2.fromOffset(38, 4),
+		Size = UDim2.new(1, -50, 1, -8),
+		Text = text,
+		TextColor3 = color,
+		TextTransparency = 1,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = toast,
+	}, 2)
+	local outline = textLabel:FindFirstChildOfClass("UIStroke")
+	if outline then
+		outline.Transparency = 1
+		TweenService:Create(outline, TWEEN_POP, { Transparency = 0 }):Play()
+	end
+	TweenService:Create(toast, TWEEN_POP, { Position = UDim2.fromOffset(0, 0), BackgroundTransparency = 0.12 }):Play()
+	TweenService:Create(accent, TWEEN_POP, { BackgroundTransparency = 0 }):Play()
+	TweenService:Create(textLabel, TWEEN_POP, { TextTransparency = 0 }):Play()
 
-	local toasts = {}
+	local holders = {}
 	for _, child in refs.Toasts:GetChildren() do
-		if child:IsA("TextLabel") then
-			table.insert(toasts, child)
+		if child:IsA("Frame") then
+			table.insert(holders, child)
 		end
 	end
-	table.sort(toasts, function(a, b)
+	table.sort(holders, function(a, b)
 		return a.LayoutOrder < b.LayoutOrder
 	end)
-	while #toasts > 5 do
-		table.remove(toasts, 1):Destroy()
+	while #holders > 5 do
+		table.remove(holders, 1):Destroy()
 	end
 
 	task.delay(3.5, function()
-		if toast.Parent then
-			local fade = TweenService:Create(toast, TweenInfo.new(0.4), { TextTransparency = 1, BackgroundTransparency = 1, TextStrokeTransparency = 1 })
-			fade:Play()
-			fade.Completed:Wait()
-			toast:Destroy()
+		if not holder.Parent then
+			return
 		end
+		local info = TweenInfo.new(0.35)
+		TweenService:Create(toast, info, { BackgroundTransparency = 1 }):Play()
+		TweenService:Create(accent, info, { BackgroundTransparency = 1 }):Play()
+		if outline then
+			TweenService:Create(outline, info, { Transparency = 1 }):Play()
+		end
+		local fade = TweenService:Create(textLabel, info, { TextTransparency = 1 })
+		fade:Play()
+		fade.Completed:Wait()
+		holder:Destroy()
 	end)
 end
 
@@ -4776,28 +6009,32 @@ local bannerToken = 0
 function UI.Banner(data)
 	bannerToken += 1
 	local token = bannerToken
-	local banner = refs.Banner
+	local color = data.Color or Color3.fromRGB(255, 150, 60)
 	refs.BannerTitle.Text = data.Title or ""
-	refs.BannerTitle.TextColor3 = data.Color or WHITE
 	refs.BannerSub.Text = data.Subtitle or ""
-	banner:FindFirstChildOfClass("UIStroke").Color = data.Color or WHITE
-	banner.Visible = true
-	banner.Size = UDim2.fromOffset(720 * 0.6, 120 * 0.6)
-	TweenService:Create(banner, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Size = UDim2.fromOffset(720, 120) }):Play()
+	refs.BannerGradient.Color = ColorSequence.new(color:Lerp(WHITE, 0.15), color:Lerp(Color3.fromRGB(60, 20, 90), 0.6))
+	refs.Banner.Visible = true
+	refs.BannerPop.Scale = 0.4
+	TweenService:Create(refs.BannerPop, TweenInfo.new(0.5, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 
 	task.spawn(function()
 		local shownUntil = os.clock() + 8
 		while token == bannerToken and os.clock() < shownUntil do
 			local left = (data.EndsAt or 0) - workspace:GetServerTimeNow()
 			if left > 0 then
-				refs.BannerTimer.Text = Util.FormatTime(left)
+				refs.BannerTimer.Text = "⏱ " .. Util.FormatTime(left)
 			else
 				refs.BannerTimer.Text = ""
 			end
 			task.wait(0.25)
 		end
 		if token == bannerToken then
-			banner.Visible = false
+			local shrink = TweenService:Create(refs.BannerPop, TweenInfo.new(0.25), { Scale = 0 })
+			shrink:Play()
+			shrink.Completed:Wait()
+			if token == bannerToken then
+				refs.Banner.Visible = false
+			end
 		end
 	end)
 end
@@ -4810,15 +6047,22 @@ function UI.Popup(text, color)
 	popup.Text = text
 	popup.TextColor3 = color or WHITE
 	popup.TextTransparency = 0
-	popup.TextStrokeTransparency = 0
+	local outline = popup:FindFirstChildOfClass("UIStroke")
+	if outline then
+		outline.Transparency = 0
+	end
 	popup.Visible = true
-	popup.Size = UDim2.fromOffset(200, 30)
-	TweenService:Create(popup, TweenInfo.new(0.4, Enum.EasingStyle.Back), { Size = UDim2.fromOffset(700, 90) }):Play()
-	task.delay(2.2, function()
+	refs.PopupPop.Scale = 0.3
+	TweenService:Create(refs.PopupPop, TweenInfo.new(0.45, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	task.delay(1.8, function()
 		if token ~= popupToken then
 			return
 		end
-		local fade = TweenService:Create(popup, TweenInfo.new(0.5), { TextTransparency = 1, TextStrokeTransparency = 1 })
+		local info = TweenInfo.new(0.4)
+		if outline then
+			TweenService:Create(outline, info, { Transparency = 1 }):Play()
+		end
+		local fade = TweenService:Create(popup, info, { TextTransparency = 1 })
 		fade:Play()
 		fade.Completed:Wait()
 		if token == popupToken then
@@ -4827,32 +6071,111 @@ function UI.Popup(text, color)
 	end)
 end
 
+function UI.HatchCard(id, rarityName, mutation)
+	hatchToken += 1
+	local token = hatchToken
+	currentHatchId = id
+	local rarity = Util.GetRarity(rarityName)
+	local info = Config.MeteorlingById[id]
+
+	refs.HatchView:ClearAllChildren()
+	local _, model = viewportModel(refs.HatchView, id)
+	refs.HatchName.Text = id
+	refs.HatchRarity.Text = rarityName
+	refs.HatchRarity.TextColor3 = rarity.Color
+	local income = 0
+	if info then
+		income = info.Income
+	end
+	local title = "HATCHED!"
+	refs.HatchTitle.TextColor3 = WHITE
+	if mutation and Config.MutationByName[mutation] then
+		local m = Config.MutationByName[mutation]
+		income *= m.Mult
+		title = string.upper(mutation) .. " HATCH!"
+		refs.HatchTitle.TextColor3 = m.Color
+	end
+	refs.HatchTitle.Text = title
+	refs.HatchIncome.Text = Util.FormatMoney(income) .. "/s"
+	refs.HatchGradient.Color = ColorSequence.new(rarity.Color:Lerp(PANEL_TOP, 0.45), PANEL_BOTTOM)
+	refs.HatchNew.Visible = false
+	refs.Hatch.Visible = true
+	refs.HatchPop.Scale = 0.2
+	TweenService:Create(refs.HatchPop, TweenInfo.new(0.55, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+
+	-- Spin the model and the light rays
+	local started = os.clock()
+	local connection
+	connection = RunService.RenderStepped:Connect(function()
+		if token ~= hatchToken or not model.Parent then
+			connection:Disconnect()
+			return
+		end
+		local t = os.clock() - started
+		model:PivotTo(CFrame.new(0, math.abs(math.sin(t * 4)) * 0.3, 0) * CFrame.Angles(0, t * 1.6, 0))
+		refs.HatchRays.Rotation = t * 25
+	end)
+
+	task.delay(3.2, function()
+		if token ~= hatchToken then
+			return
+		end
+		local shrink = TweenService:Create(
+			refs.HatchPop,
+			TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+			{ Scale = 0 }
+		)
+		shrink:Play()
+		shrink.Completed:Wait()
+		if token == hatchToken then
+			refs.Hatch.Visible = false
+			currentHatchId = nil
+		end
+	end)
+end
+
+-- Shows the NEW! badge if the hatch card for this id is on screen. Returns true if it did.
+function UI.MarkNew(id)
+	if currentHatchId == id and refs.Hatch.Visible then
+		refs.HatchNew.Visible = true
+		refs.HatchNewPop.Scale = 0
+		TweenService:Create(refs.HatchNewPop, TweenInfo.new(0.4, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		return true
+	end
+	return false
+end
+
 function UI.Flash(color)
 	refs.Flash.BackgroundColor3 = color or RED
-	refs.Flash.BackgroundTransparency = 0.55
+	refs.Flash.BackgroundTransparency = 0.6
 	TweenService:Create(refs.Flash, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
 end
 
--- Floating "+$123" text near the top bar
+-- Floating "+$123" near the top bar
 function UI.FloatText(text, color, fromSpeed)
 	local yOffset = 40
 	if fromSpeed then
-		yOffset = 100
+		yOffset = 104
 	end
 	local float = label({
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, math.random(-60, 60), 0, yOffset),
-		Size = UDim2.fromOffset(220, 36),
+		Position = UDim2.new(0.5, math.random(-70, 70), 0, yOffset),
+		Size = UDim2.fromOffset(240, 40),
 		Text = text,
 		TextColor3 = color or WHITE,
-		TextStrokeTransparency = 0,
 		ZIndex = 20,
 		Parent = refs.TopBar,
-	})
-	local tween = TweenService:Create(float, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Position = float.Position + UDim2.fromOffset(0, 60),
+	}, 3)
+	local s = create("UIScale", { Scale = 0.4, Parent = float })
+	TweenService:Create(s, TweenInfo.new(0.3, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	local outline = float:FindFirstChildOfClass("UIStroke")
+	local info = TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	if outline then
+		TweenService:Create(outline, info, { Transparency = 1 }):Play()
+	end
+	local tween = TweenService:Create(float, info, {
+		Position = float.Position + UDim2.fromOffset(0, 70),
 		TextTransparency = 1,
-		TextStrokeTransparency = 1,
 	})
 	tween:Play()
 	tween.Completed:Connect(function()
@@ -4860,27 +6183,61 @@ function UI.FloatText(text, color, fromSpeed)
 	end)
 end
 
+-- Coins fly from the middle of the screen into the cash counter
+function UI.CoinBurst()
+	local layer = refs.Coins
+	local camera = workspace.CurrentCamera
+	if not layer or not camera or not refs.Coin then
+		return
+	end
+	local target = refs.Coin.AbsolutePosition + refs.Coin.AbsoluteSize / 2
+	local center = camera.ViewportSize / 2
+	for i = 1, 8 do
+		local coin = create("TextLabel", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(center.X + math.random(-120, 120), center.Y + math.random(-60, 80)),
+			Size = UDim2.fromOffset(34, 34),
+			BackgroundColor3 = GOLD,
+			Text = "$",
+			Font = FONT,
+			TextScaled = true,
+			TextColor3 = Color3.fromRGB(120, 70, 0),
+			Parent = layer,
+		}, { round(), stroke(Color3.fromRGB(120, 70, 0), 2) })
+		local tween = TweenService:Create(
+			coin,
+			TweenInfo.new(0.55 + i * 0.04, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+			{ Position = UDim2.fromOffset(target.X, target.Y), Size = UDim2.fromOffset(16, 16) }
+		)
+		tween:Play()
+		tween.Completed:Connect(function()
+			coin:Destroy()
+		end)
+	end
+	task.delay(0.6, function()
+		refs.CoinPop.Scale = 1.3
+		TweenService:Create(refs.CoinPop, TWEEN_POP, { Scale = 1 }):Play()
+	end)
+end
+
 function UI.TogglePanel(name)
 	for panelName, panel in panels do
-		if panelName == name then
-			panel.Visible = not panel.Visible
-		else
-			panel.Visible = false
+		if panelName == name and not panel.Frame.Visible then
+			panel.Frame.Visible = true
+			panel.Pop.Scale = 0.6
+			TweenService:Create(panel.Pop, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+			openPanel = panelName
+		elseif panel.Frame.Visible then
+			panel.Frame.Visible = false
+			if openPanel == panelName then
+				openPanel = nil
+			end
 		end
 	end
+	setBlur(openPanel ~= nil)
 end
 
--- State updates ---------------------------------------------------------------
-
-local function setButton(btn, text, enabled, color)
-	btn.Text = text
-	btn.AutoButtonColor = enabled
-	if enabled then
-		btn.BackgroundColor3 = color or GREEN
-	else
-		btn.BackgroundColor3 = Color3.fromRGB(90, 90, 105)
-	end
-end
+-- State ---------------------------------------------------------------------------
 
 function UI.Update(newState)
 	state = newState
@@ -4888,33 +6245,37 @@ function UI.Update(newState)
 	refs.Money.Text = Util.FormatMoney(state.Money)
 	local incomeText = "+" .. Util.FormatMoney(state.Income) .. "/s"
 	if state.Bank >= 1 and not state.Passes.AutoCollect then
-		incomeText ..= "   (" .. Util.FormatMoney(state.Bank) .. " at base)"
+		incomeText ..= "  •  " .. Util.FormatMoney(state.Bank) .. " at base"
 	end
 	refs.Income.Text = incomeText
 
-	local speedText = "⚡ " .. state.Speed .. " Speed   (+" .. state.PadRate .. "/s on pad)"
+	local speedText = "⚡ " .. state.Speed .. " Speed   +" .. state.PadRate .. "/s on pad"
 	if state.Speed >= state.MaxSpeed then
 		speedText = "⚡ " .. state.Speed .. " Speed   MAX!"
 	end
 	refs.Speed.Text = speedText
-	refs.SpeedFill.Size = UDim2.fromScale(math.clamp(state.Speed / state.MaxSpeed, 0, 1), 1)
+	TweenService:Create(refs.SpeedFill, TWEEN_FAST, {
+		Size = UDim2.fromScale(math.clamp(state.Speed / state.MaxSpeed, 0.05, 1), 1),
+	}):Play()
 
 	-- Shop
 	local boots = refs.BootsRow
 	boots.Title.Text = "Speed Boots  Lv " .. state.Boots .. "/" .. state.BootsMax
+	local canBoots = state.BootsCost ~= nil and state.Money >= state.BootsCost
 	if state.BootsCost then
-		boots.Desc.Text = "Speed Pad: +" .. state.PadRate .. "/s  →  more per level"
-		setButton(boots.Button, Util.FormatMoney(state.BootsCost), state.Money >= state.BootsCost)
+		boots.Desc.Text = "Speed Pad +" .. state.PadRate .. "/s  →  more per level"
+		setButton(boots.Button, Util.FormatMoney(state.BootsCost), canBoots)
 	else
-		boots.Desc.Text = "Speed Pad: +" .. state.PadRate .. "/s"
+		boots.Desc.Text = "Speed Pad +" .. state.PadRate .. "/s"
 		setButton(boots.Button, "MAX", false)
 	end
 
 	local pedestal = refs.PedestalRow
 	pedestal.Title.Text = "Extra Pedestal  " .. state.Pedestals .. "/" .. state.MaxBuyable
 	pedestal.Desc.Text = "Slots used: " .. state.Used .. "/" .. state.PedestalsTotal
+	local canPedestal = state.PedestalCost ~= nil and state.Money >= state.PedestalCost
 	if state.PedestalCost then
-		setButton(pedestal.Button, Util.FormatMoney(state.PedestalCost), state.Money >= state.PedestalCost)
+		setButton(pedestal.Button, Util.FormatMoney(state.PedestalCost), canPedestal)
 	else
 		setButton(pedestal.Button, "MAX", false)
 	end
@@ -4935,22 +6296,31 @@ function UI.Update(newState)
 		.. "% income"
 	for id, card in refs.IndexCards do
 		if state.Index[id] then
-			card.Circle.BackgroundColor3 = card.Info.Color
+			card.Viewport.ImageColor3 = WHITE
+			card.Viewport.ImageTransparency = 0
 			card.Name.Text = id
 			card.Income.Text = Util.FormatMoney(card.Info.Income) .. "/s"
 		else
-			card.Circle.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+			card.Viewport.ImageColor3 = BLACK
+			card.Viewport.ImageTransparency = 0.25
 			card.Name.Text = "???"
 			card.Income.Text = ""
 		end
 	end
 
 	-- Rebirth
+	local canRebirth = state.Money >= state.RebirthCost
+	local progress = math.clamp(state.Money / state.RebirthCost, 0, 1)
 	refs.RebirthCount.Text = "Rebirths: " .. state.Rebirths
-	refs.RebirthMult.Text = "Rebirth bonus: x" .. state.RebirthMult .. "  →  x" .. state.NextRebirthMult
+	refs.RebirthMult.Text = "Income bonus x" .. state.RebirthMult .. "  →  x" .. state.NextRebirthMult
 	refs.RebirthCost.Text = "Cost: " .. Util.FormatMoney(state.RebirthCost)
-	refs.RebirthFill.Size = UDim2.fromScale(math.clamp(state.Money / state.RebirthCost, 0, 1), 1)
-	setButton(refs.RebirthButton, "REBIRTH", state.Money >= state.RebirthCost, Color3.fromRGB(170, 90, 255))
+	refs.RebirthFill.Size = UDim2.fromScale(math.max(progress, 0.03), 1)
+	refs.RebirthPercent.Text = math.floor(progress * 100) .. "%"
+	setButton(refs.RebirthButton, "REBIRTH", canRebirth, Color3.fromRGB(175, 90, 255))
+
+	-- "!" badges when something is affordable
+	refs.Badges.Shop.Visible = canBoots or canPedestal
+	refs.Badges.Rebirth.Visible = canRebirth
 end
 
 function UI.UpdateCarry()
@@ -4962,13 +6332,17 @@ function UI.UpdateCarry()
 	local info = Config.MeteorlingById[id]
 	local rarity = Util.GetRarity(info and info.Rarity or "Common")
 	if player:GetAttribute("CarryStolen") then
-		refs.Carry.Text = "😈 STOLEN " .. id .. "! Run home before they bonk you!"
+		refs.CarryText.Text = "😈 STOLEN " .. id .. "! Run home before they bonk you!"
 	else
-		refs.Carry.Text = "☄️ " .. rarity.Name .. " Meteor! Follow the beam to your base!"
+		refs.CarryText.Text = "☄️ " .. rarity.Name .. " Meteor! Follow the beam home!"
 	end
-	refs.Carry.TextColor3 = rarity.Color
+	refs.CarryText.TextColor3 = rarity.Color
 	if rarity.Name == "Secret" then
-		refs.Carry.TextColor3 = WHITE
+		refs.CarryText.TextColor3 = WHITE
+	end
+	local grad = refs.Carry:FindFirstChildOfClass("UIGradient")
+	if grad then
+		grad.Color = ColorSequence.new(rarity.Color:Lerp(PANEL_TOP, 0.55), PANEL_BOTTOM)
 	end
 	refs.Carry.Visible = true
 end
@@ -4981,12 +6355,12 @@ local function timerLoop()
 			local showerLeft = (state.ShowerUntil or 0) - now
 			refs.ShowerTimer.Visible = showerLeft > 0
 			if showerLeft > 0 then
-				refs.ShowerTimer.Text = "☄️ Shower " .. Util.FormatTime(showerLeft)
+				refs.ShowerText.Text = "☄️ Shower " .. Util.FormatTime(showerLeft)
 			end
 			local luckLeft = (state.LuckUntil or 0) - now
 			refs.LuckTimer.Visible = luckLeft > 0
 			if luckLeft > 0 then
-				refs.LuckTimer.Text = "🍀 2x Luck " .. Util.FormatTime(luckLeft)
+				refs.LuckText.Text = "🍀 2x Luck " .. Util.FormatTime(luckLeft)
 			end
 		end
 	end
@@ -5003,9 +6377,20 @@ function UI.Init()
 	clickSound = create("Sound", {
 		Name = "Click",
 		SoundId = "rbxasset://sounds/electronicpingshort.wav",
-		Volume = 0.4,
+		Volume = 0.35,
 		Parent = SoundService,
 	})
+	hoverSound = create("Sound", {
+		Name = "Hover",
+		SoundId = "rbxasset://sounds/clickfast.wav",
+		Volume = 0.15,
+		Parent = SoundService,
+	})
+
+	local camera = workspace.CurrentCamera
+	if camera then
+		blur = create("BlurEffect", { Name = "PanelBlur", Size = 0, Parent = camera })
+	end
 
 	buildTopBar()
 	buildMenu()
@@ -5015,7 +6400,6 @@ function UI.Init()
 	buildOverlay()
 
 	updateScale()
-	local camera = workspace.CurrentCamera
 	if camera then
 		camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
 	end
@@ -5031,14 +6415,14 @@ return UI
 ]]></ProtectedString>
 						</Properties>
 					</Item>
-					<Item class="ModuleScript" referent="RBX0778E98A739F4FA0A85A1D6E06AFE8B9">
+					<Item class="ModuleScript" referent="RBXE4EDB256A21A4732A3EF5680AB296060">
 						<Properties>
 							<string name="Name">World</string>
-							<ProtectedString name="Source"><![CDATA[-- World: client-side touches on the 3D world.
---   * shows "Sell" prompts only on your base and "Steal" prompts only on other bases
---   * hatch countdowns above meteors
---   * Meteorlings bob and sway on their pedestals
---   * a beam that points from you to your base while you carry something
+							<ProtectedString name="Source"><![CDATA[-- World: client-side life for the 3D world.
+--   * "Sell" prompts only on your base, "Steal" prompts only on other bases
+--   * hatch countdowns, impact countdowns (shrinking target + 3..2..1)
+--   * Meteorlings hop and sway, meteors on the ground slowly spin
+--   * camera FOV widens with speed, beam from you to your base while carrying
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -5054,6 +6438,8 @@ local World = {}
 
 local beam = nil
 local beamAttachment = nil
+local warnings = setmetatable({}, { __mode = "k" }) -- [part] = { Start, Gui, Label }
+local currentFov = 70
 
 local function findPlotModel(instance)
 	local current = instance.Parent
@@ -5137,31 +6523,72 @@ local function updateBeam()
 	beam.Name = "CarryBeam"
 	beam.Attachment0 = beamAttachment
 	beam.Attachment1 = target
-	beam.Color = ColorSequence.new(Color3.fromRGB(90, 255, 120), Color3.fromRGB(60, 200, 255))
-	beam.Width0 = 0.9
-	beam.Width1 = 2.5
+	beam.Color = ColorSequence.new(Color3.fromRGB(90, 255, 140), Color3.fromRGB(60, 200, 255))
+	beam.Width0 = 0.8
+	beam.Width1 = 3
 	beam.FaceCamera = true
 	beam.LightEmission = 1
-	beam.Transparency = NumberSequence.new(0.2, 0.5)
+	beam.LightInfluence = 0
+	beam.Transparency = NumberSequence.new(0.15, 0.55)
 	beam.Segments = 1
 	beam.Parent = root
 end
 
-local function hatchTimerLoop()
+local function textLoop()
 	while true do
-		task.wait(0.25)
+		task.wait(0.2)
 		local now = workspace:GetServerTimeNow()
 		for _, timer in CollectionService:GetTagged("HatchTimer") do
 			local hatchAt = timer:GetAttribute("HatchAt")
 			if hatchAt then
 				local left = hatchAt - now
 				if left > 0 then
-					timer.Text = "Hatching in " .. Util.FormatTime(left)
+					timer.Text = "🥚 " .. Util.FormatTime(left)
 				else
-					timer.Text = "Hatching..."
+					timer.Text = "🐣 Hatching..."
 				end
 			end
 		end
+	end
+end
+
+local function updateWarning(part, now)
+	local impactAt = part:GetAttribute("ImpactAt")
+	local inner = part:FindFirstChild("Inner")
+	if not impactAt or not inner then
+		return
+	end
+	local state = warnings[part]
+	if not state then
+		local gui = Instance.new("BillboardGui")
+		gui.Size = UDim2.new(6, 0, 3, 0)
+		gui.StudsOffsetWorldSpace = Vector3.new(0, 4, 0)
+		gui.AlwaysOnTop = true
+		gui.LightInfluence = 0
+		gui.MaxDistance = 250
+		local text = Instance.new("TextLabel")
+		text.Size = UDim2.fromScale(1, 1)
+		text.BackgroundTransparency = 1
+		text.Font = Enum.Font.FredokaOne
+		text.TextScaled = true
+		text.TextColor3 = Color3.fromRGB(255, 80, 80)
+		text.TextStrokeTransparency = 0
+		text.Text = ""
+		text.Parent = gui
+		gui.Parent = part
+		state = { Start = now, Total = math.max(0.5, impactAt - now), Label = text, Diameter = part.Size.Y }
+		warnings[part] = state
+	end
+	local left = impactAt - now
+	local fraction = math.clamp(left / state.Total, 0.02, 1)
+	local d = state.Diameter * fraction
+	inner.Size = Vector3.new(inner.Size.X, d, d)
+	inner.CFrame = part.CFrame
+	if left > 0 then
+		state.Label.Text = tostring(math.ceil(left))
+		state.Label.TextSize = 40
+	else
+		state.Label.Text = "!"
 	end
 end
 
@@ -5196,21 +6623,54 @@ function World.Init()
 		updateBeam()
 	end)
 
-	task.spawn(hatchTimerLoop)
+	task.spawn(textLoop)
 
-	-- Bobbing Meteorlings
-	RunService.RenderStepped:Connect(function()
+	RunService.RenderStepped:Connect(function(dt)
 		local t = os.clock()
+		local now = workspace:GetServerTimeNow()
+
+		-- Meteorlings: happy hop + sway
 		for _, part in CollectionService:GetTagged("Bob") do
 			if part.Anchored then
 				local base = part:GetAttribute("BaseCF")
 				if typeof(base) == "CFrame" then
-					local phase = (base.Position.X + base.Position.Z) * 0.1
+					local phase = (base.Position.X + base.Position.Z) * 0.13
+					local hop = math.abs(math.sin(t * 2.6 + phase)) * 0.55
 					part.CFrame = base
-						* CFrame.new(0, math.sin(t * 2 + phase) * 0.35 + 0.35, 0)
-						* CFrame.Angles(0, math.sin(t * 0.9 + phase) * 0.4, 0)
+						* CFrame.new(0, hop + 0.15, 0)
+						* CFrame.Angles(0, math.sin(t * 1.1 + phase) * 0.45, math.sin(t * 2.6 + phase) * 0.06)
 				end
 			end
+		end
+
+		-- Meteors: slow spin and float
+		for _, part in CollectionService:GetTagged("Spin") do
+			if part.Anchored then
+				local base = part:GetAttribute("BaseCF")
+				if typeof(base) == "CFrame" then
+					local phase = (base.Position.X - base.Position.Z) * 0.1
+					part.CFrame = base
+						* CFrame.new(0, math.sin(t * 1.8 + phase) * 0.25 + 0.25, 0)
+						* CFrame.Angles(0, t * 0.8 + phase, math.sin(t + phase) * 0.15)
+				end
+			end
+		end
+
+		-- Impact countdowns
+		for _, part in CollectionService:GetTagged("ImpactWarning") do
+			updateWarning(part, now)
+		end
+
+		-- Speed FOV
+		local camera = workspace.CurrentCamera
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if camera and root then
+			local velocity = root.AssemblyLinearVelocity
+			local flat = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+			local target = 70 + math.clamp((flat - 20) * 0.12, 0, 22)
+			currentFov += (target - currentFov) * math.clamp(dt * 4, 0, 1)
+			camera.FieldOfView = currentFov
 		end
 	end)
 end
@@ -5222,7 +6682,7 @@ return World
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="LocalScript" referent="RBX03A3E60756B94C2D9D44E0E7CFA283EE">
+				<Item class="LocalScript" referent="RBXA8C767A3D06E4E7285337031C22D1F25">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Steal a Meteor: client entry point.
@@ -5260,16 +6720,23 @@ end)
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBX1EF633A3D68A44769094753CFB73F321">
+	<Item class="Workspace" referent="RBX096A1AF852E24CA183AE9E1F8B72B6C0">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="FilteringEnabled">true</bool>
 		</Properties>
 	</Item>
-	<Item class="SoundService" referent="RBX6792B3DCBDDC4BCA951465048CB430B9">
+	<Item class="SoundService" referent="RBXE5DDDF78957045BAB3E5CCE0945FA465">
 		<Properties>
 			<string name="Name">SoundService</string>
 			<bool name="RespectFilteringEnabled">true</bool>
+		</Properties>
+	</Item>
+	<Item class="Lighting" referent="RBXED7947E11E194BF9B877A125AC13342D">
+		<Properties>
+			<string name="Name">Lighting</string>
+			<token name="Technology">4</token>
+			<bool name="GlobalShadows">true</bool>
 		</Properties>
 	</Item>
 </roblox>

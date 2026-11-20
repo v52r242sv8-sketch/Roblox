@@ -11,7 +11,7 @@ local Config = require(Shared.Config)
 local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
 
-local Visuals = require(script.Parent.Parent.Modules.Visuals)
+local Visuals = require(Shared.Visuals)
 
 local PlotService = {}
 local Services
@@ -439,6 +439,15 @@ local function hatchTick(player, plot, data)
 			Remotes.Effect:FireClient(player, "Hatch", item.id, info.Rarity, item.mut)
 			discover(player, data, item)
 			PlotService.RenderPedestal(plot, i)
+			local pedestal = plot.Pedestals[i]
+			if pedestal then
+				Remotes.Effect:FireAllClients(
+					"HatchFX",
+					pedestal.Part.Position + Vector3.new(0, 3, 0),
+					Util.GetRarity(info.Rarity).Color,
+					Config.RarityIndex[info.Rarity]
+				)
+			end
 		end
 	end
 end

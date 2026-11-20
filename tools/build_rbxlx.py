@@ -28,6 +28,9 @@ def cdata(text):
 
 
 def prop_xml(name, value):
+    if isinstance(value, dict) and "Enum" in value:
+        # Rojo-style explicit enum: {"Enum": 4}
+        return f'<token name="{escape(name)}">{int(value["Enum"])}</token>'
     if isinstance(value, bool):
         return f'<bool name="{escape(name)}">{"true" if value else "false"}</bool>'
     if isinstance(value, int):

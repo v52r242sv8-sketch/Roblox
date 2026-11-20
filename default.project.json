@@ -28,6 +28,14 @@
       "$properties": {
         "RespectFilteringEnabled": true
       }
+    },
+    "Lighting": {
+      "$properties": {
+        "Technology": {
+          "Enum": 4
+        },
+        "GlobalShadows": true
+      }
     }
   }
 }

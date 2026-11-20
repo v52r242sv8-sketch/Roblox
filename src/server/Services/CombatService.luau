@@ -8,7 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Remotes = require(Shared.Remotes)
 
-local Visuals = require(script.Parent.Parent.Modules.Visuals)
+local Visuals = require(Shared.Visuals)
 
 local CombatService = {}
 local Services
@@ -94,8 +94,12 @@ function CombatService.Swing(player, tool, big)
 	if not root then
 		return
 	end
+	if Services.Meteor.GetCarry(player) then
+		return -- hands are full
+	end
 
-	-- Swing animation: tilt the grip forward for a moment
+	-- Swing animation (rotates the shoulder joint) + sound
+	Services.Player.PlaySwing(player)
 	local handle = tool:FindFirstChild("Handle")
 	if handle then
 		local swing = handle:FindFirstChild("Swing")
@@ -103,13 +107,12 @@ function CombatService.Swing(player, tool, big)
 			swing:Play()
 		end
 	end
-	local restGrip = tool.Grip
-	tool.Grip = restGrip * CFrame.Angles(math.rad(-80), 0, 0)
-	task.delay(0.18, function()
-		if tool.Parent then
-			tool.Grip = restGrip
-		end
-	end)
+
+	-- Hit lands when the hammer comes down
+	task.wait(0.15)
+	if not root.Parent then
+		return
+	end
 
 	local facing = root.CFrame.LookVector
 	facing = Vector3.new(facing.X, 0, facing.Z).Unit

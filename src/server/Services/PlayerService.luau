@@ -2,6 +2,7 @@
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -160,6 +161,142 @@ function PlayerService.ApplyWalkSpeed(player)
 	-- Fast players need a stronger jump to feel right
 	humanoid.UseJumpPower = true
 	humanoid.JumpPower = 50 + math.min(30, speed / 10)
+	PlayerService.UpdateTrail(player, data.Speed)
+end
+
+-- Speed trail: everyone sees how fast you are -------------------------------------
+
+local TRAIL_TIERS = {
+	{ Speed = 40, Color = Color3.fromRGB(90, 220, 255) },
+	{ Speed = 90, Color = Color3.fromRGB(190, 110, 255) },
+	{ Speed = 160, Color = Color3.fromRGB(255, 200, 60) },
+	{ Speed = 230, Color = Color3.fromRGB(255, 80, 180) },
+}
+
+function PlayerService.CreateTrail(character)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root or root:FindFirstChild("SpeedTrail") then
+		return
+	end
+	local top = Instance.new("Attachment")
+	top.Name = "TrailTop"
+	top.Position = Vector3.new(0, 1.1, 0.3)
+	top.Parent = root
+	local bottom = Instance.new("Attachment")
+	bottom.Name = "TrailBottom"
+	bottom.Position = Vector3.new(0, -1.8, 0.3)
+	bottom.Parent = root
+	local trail = Instance.new("Trail")
+	trail.Name = "SpeedTrail"
+	trail.Attachment0 = top
+	trail.Attachment1 = bottom
+	trail.Lifetime = 0.35
+	trail.LightEmission = 1
+	trail.LightInfluence = 0
+	trail.MinLength = 0.2
+	trail.Transparency = NumberSequence.new(0.25, 1)
+	trail.WidthScale = NumberSequence.new(1, 0.2)
+	trail.Enabled = false
+	trail.Parent = root
+end
+
+function PlayerService.UpdateTrail(player, speed)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local trail = root and root:FindFirstChild("SpeedTrail")
+	if not trail then
+		return
+	end
+	local color = nil
+	for _, tier in TRAIL_TIERS do
+		if speed >= tier.Speed then
+			color = tier.Color
+		end
+	end
+	trail.Enabled = color ~= nil
+	if color then
+		trail.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
+	end
+end
+
+-- Arm poses (no animation assets needed: we rotate the shoulder joints) ---------
+
+local originalC0 = setmetatable({}, { __mode = "k" })
+
+local function getShoulders(character)
+	local rightArm = character:FindFirstChild("RightUpperArm")
+	local leftArm = character:FindFirstChild("LeftUpperArm")
+	if rightArm and leftArm then
+		return rightArm:FindFirstChild("RightShoulder"), leftArm:FindFirstChild("LeftShoulder"), "R15"
+	end
+	local torso = character:FindFirstChild("Torso")
+	if torso then
+		return torso:FindFirstChild("Right Shoulder"), torso:FindFirstChild("Left Shoulder"), "R6"
+	end
+	return nil, nil, nil
+end
+
+local function baseC0(motor)
+	if not originalC0[motor] then
+		originalC0[motor] = motor.C0
+	end
+	return originalC0[motor]
+end
+
+local function rotated(motor, rig, degrees)
+	local angle = math.rad(degrees)
+	if rig == "R15" then
+		return baseC0(motor) * CFrame.Angles(angle, 0, 0)
+	end
+	return baseC0(motor) * CFrame.Angles(0, 0, angle)
+end
+
+local function tweenC0(motor, goal, duration, style)
+	local tween = TweenService:Create(
+		motor,
+		TweenInfo.new(duration, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ C0 = goal }
+	)
+	tween:Play()
+	return tween
+end
+
+-- Both arms straight up while carrying something over your head
+function PlayerService.SetCarryPose(player, on)
+	local character = player.Character
+	if not character then
+		return
+	end
+	local right, left, rig = getShoulders(character)
+	for _, motor in { right or false, left or false } do
+		if motor and motor:IsA("Motor6D") then
+			if on then
+				tweenC0(motor, rotated(motor, rig, 180), 0.25, Enum.EasingStyle.Back)
+			else
+				tweenC0(motor, baseC0(motor), 0.2)
+			end
+		end
+	end
+end
+
+-- Hammer swing: wind up over the head, smash down, return
+function PlayerService.PlaySwing(player)
+	local character = player.Character
+	if not character then
+		return
+	end
+	local right, _, rig = getShoulders(character)
+	if not right or not right:IsA("Motor6D") then
+		return
+	end
+	task.spawn(function()
+		tweenC0(right, rotated(right, rig, 115), 0.1).Completed:Wait()
+		tweenC0(right, rotated(right, rig, -35), 0.08, Enum.EasingStyle.Quart).Completed:Wait()
+		task.wait(0.05)
+		if right.Parent then
+			tweenC0(right, baseC0(right), 0.22)
+		end
+	end)
 end
 
 function PlayerService.ApplyTag(player)
@@ -211,6 +348,7 @@ function PlayerService.OnCharacter(player, character)
 		end)
 	end
 
+	PlayerService.CreateTrail(character)
 	PlayerService.ApplyWalkSpeed(player)
 	PlayerService.ApplyTag(player)
 	Services.Combat.GiveHammer(player, false)

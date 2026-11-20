@@ -13,7 +13,7 @@ local Config = require(Shared.Config)
 local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
 
-local Visuals = require(script.Parent.Parent.Modules.Visuals)
+local Visuals = require(Shared.Visuals)
 
 local MeteorService = {}
 local Services
@@ -177,7 +177,7 @@ function MeteorService.Impact(position, rarity)
 	TweenService:Create(scorch, TweenInfo.new(8), { Transparency = 1 }):Play()
 	Debris:AddItem(scorch, 8.5)
 
-	Remotes.Effect:FireAllClients("Impact", position, rarity.Size)
+	Remotes.Effect:FireAllClients("Impact", position, rarity.Size, rarity.Color)
 end
 
 -- Spawns one meteor in a zone. opts: Rarity, Mutation, Special, Beacon, WarningTime, Lifetime, Announce
@@ -207,6 +207,10 @@ function MeteorService.SpawnMeteor(zoneIndex, opts)
 	local warning, inner = Visuals.WarningCircle(rarity.Size * 2 + 6, rarity.Color)
 	warning.CFrame = CFrame.new(target + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, 0, math.rad(90))
 	inner.CFrame = warning.CFrame
+	-- The client shrinks the inner disc and shows a countdown until this time
+	local warningTime = opts.WarningTime or Config.Meteor.WarningTime
+	warning:SetAttribute("ImpactAt", workspace:GetServerTimeNow() + warningTime + Config.Meteor.FallTime)
+	CollectionService:AddTag(warning, "ImpactWarning")
 	warning.Parent = meteorFolder
 	local pulse = TweenService:Create(
 		warning,
@@ -221,7 +225,7 @@ function MeteorService.SpawnMeteor(zoneIndex, opts)
 		beacon.Parent = meteorFolder
 	end
 
-	task.delay(opts.WarningTime or Config.Meteor.WarningTime, function()
+	task.delay(warningTime, function()
 		local model = Visuals.MeteorModel(item, false)
 		local root = model.PrimaryPart
 		local startPos = target + Vector3.new(math.random(-90, 90), 280, math.random(-90, 90))
@@ -264,6 +268,7 @@ function MeteorService.SpawnMeteor(zoneIndex, opts)
 		trail.Enabled = false
 		Debris:AddItem(fire, 2)
 
+		root:SetAttribute("BaseCF", root.CFrame)
 		MeteorService.Impact(target, rarity)
 		MeteorService.MakeGround(model, item, {
 			Zone = countedZone,
@@ -281,10 +286,12 @@ function MeteorService.Carry(player, item, stolen, existingModel)
 	if carries[player] then
 		return false
 	end
-	local root = Services.Player.GetAliveParts(player)
+	local root, humanoid = Services.Player.GetAliveParts(player)
 	if not root then
 		return false
 	end
+	-- Hands are busy: put the hammer away
+	humanoid:UnequipTools()
 
 	local model = existingModel or Visuals.ItemModel(item, false)
 	local primary = model.PrimaryPart
@@ -300,6 +307,7 @@ function MeteorService.Carry(player, item, stolen, existingModel)
 		end
 	end
 	CollectionService:RemoveTag(primary, "Bob")
+	CollectionService:RemoveTag(primary, "Spin")
 
 	local offset = CFrame.new(0, 2.8 + primary.Size.Y / 2, 0)
 	model:PivotTo(root.CFrame * offset)
@@ -325,6 +333,7 @@ function MeteorService.Carry(player, item, stolen, existingModel)
 
 	player:SetAttribute("Carrying", item.id)
 	player:SetAttribute("CarryStolen", stolen ~= nil)
+	Services.Player.SetCarryPose(player, true)
 	Services.Player.ApplyWalkSpeed(player)
 	Remotes.Effect:FireClient(player, "Grab")
 	return true
@@ -334,6 +343,9 @@ local function clearCarry(player)
 	carries[player] = nil
 	player:SetAttribute("Carrying", nil)
 	player:SetAttribute("CarryStolen", nil)
+	if player.Parent then
+		Services.Player.SetCarryPose(player, false)
+	end
 end
 
 function MeteorService.Drop(player, _reason)
@@ -360,6 +372,8 @@ function MeteorService.Drop(player, _reason)
 		primary.Anchored = true
 		primary.CanQuery = true
 		model:PivotTo(CFrame.new(position.X, y + rarity.Size * 0.35, position.Z))
+		primary:SetAttribute("BaseCF", primary.CFrame)
+		CollectionService:AddTag(primary, "Spin")
 		model.Parent = meteorFolder
 		MeteorService.MakeGround(model, carry.Item, { Lifetime = Config.Meteor.DropLifetime })
 	end

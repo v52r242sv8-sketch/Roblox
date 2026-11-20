@@ -1,5 +1,6 @@
--- Effects: knockback from bonks, camera shake from impacts, sounds and popups.
+-- Effects: knockback, camera shake, impact shockwaves with debris, hatch bursts, sounds.
 
+local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -20,6 +21,10 @@ local sounds = {}
 local shakeUntil = 0
 local shakePower = 0
 local shaking = false
+local fxFolder
+
+local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
+local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 
 local SOUND_IDS = {
 	Collect = "rbxasset://sounds/electronicpingshort.wav",
@@ -60,22 +65,84 @@ local function shake(power, duration)
 	end)
 end
 
-local function bonkPopup(position)
-	local anchor = Instance.new("Part")
-	anchor.Anchored = true
-	anchor.CanCollide = false
-	anchor.CanQuery = false
-	anchor.CanTouch = false
-	anchor.Transparency = 1
-	anchor.Size = Vector3.new(1, 1, 1)
-	anchor.Position = position + Vector3.new(0, 3, 0)
-	anchor.Parent = workspace
+local function localPart(props)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	for key, value in props do
+		p[key] = value
+	end
+	p.Parent = fxFolder
+	return p
+end
 
+local function distanceTo(position)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return math.huge
+	end
+	return (root.Position - position).Magnitude
+end
+
+local function ring(position, color, fromSize, toSize, duration)
+	local r = localPart({
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.3, fromSize, fromSize),
+		CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90)),
+		Material = Enum.Material.Neon,
+		Color = color,
+		Transparency = 0.1,
+	})
+	TweenService:Create(r, TweenInfo.new(duration, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+		Size = Vector3.new(0.3, toSize, toSize),
+		Transparency = 1,
+	}):Play()
+	Debris:AddItem(r, duration + 0.1)
+end
+
+local function burst(position, color, count, size, speed, texture)
+	local anchor = localPart({ Size = Vector3.new(1, 1, 1), Position = position, Transparency = 1 })
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Color = ColorSequence.new(color)
+	emitter.LightEmission = 1
+	emitter.LightInfluence = 0
+	emitter.Rate = 0
+	emitter.Lifetime = NumberRange.new(0.6, 1.4)
+	emitter.Speed = NumberRange.new(speed * 0.5, speed)
+	emitter.SpreadAngle = Vector2.new(180, 180)
+	emitter.Drag = 3
+	emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size), NumberSequenceKeypoint.new(1, 0) })
+	emitter.Texture = texture or SPARKLE
+	emitter.Parent = anchor
+	emitter:Emit(count)
+	Debris:AddItem(anchor, 2)
+	return anchor
+end
+
+local function flash(position, color, range, brightness, duration)
+	local anchor = localPart({ Size = Vector3.new(1, 1, 1), Position = position, Transparency = 1 })
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = range
+	light.Brightness = brightness
+	light.Parent = anchor
+	TweenService:Create(light, TweenInfo.new(duration), { Brightness = 0 }):Play()
+	Debris:AddItem(anchor, duration + 0.1)
+end
+
+local function bonkPopup(position)
+	local anchor = localPart({ Size = Vector3.new(1, 1, 1), Position = position + Vector3.new(0, 3, 0), Transparency = 1 })
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.new(6, 0, 2, 0)
+	gui.Size = UDim2.new(7, 0, 2.4, 0)
 	gui.LightInfluence = 0
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 120
+	gui.MaxDistance = 140
 	gui.Parent = anchor
 	local text = Instance.new("TextLabel")
 	text.Size = UDim2.fromScale(1, 1)
@@ -85,37 +152,98 @@ local function bonkPopup(position)
 	text.Text = "💥 BONK!"
 	text.TextColor3 = Color3.fromRGB(255, 230, 80)
 	text.TextStrokeTransparency = 0
+	text.Rotation = math.random(-15, 15)
 	text.Parent = gui
-
-	TweenService:Create(anchor, TweenInfo.new(0.9), { Position = anchor.Position + Vector3.new(0, 4, 0) }):Play()
+	TweenService:Create(anchor, TweenInfo.new(0.9, Enum.EasingStyle.Quad), { Position = anchor.Position + Vector3.new(0, 5, 0) }):Play()
 	TweenService:Create(text, TweenInfo.new(0.9), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
-	task.delay(1, function()
-		anchor:Destroy()
-	end)
+	burst(position + Vector3.new(0, 2, 0), Color3.fromRGB(255, 240, 120), 18, 0.8, 18)
+	Debris:AddItem(anchor, 1)
 end
 
 local HANDLERS = {}
 
-function HANDLERS.Impact(position, size)
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not root then
-		return
-	end
-	local distance = (root.Position - position).Magnitude
+function HANDLERS.Impact(position, size, color)
+	color = color or Color3.fromRGB(255, 150, 60)
+	local distance = distanceTo(position)
 	local reach = 60 + size * 12
 	if distance < reach then
-		shake((1 - distance / reach) * (1.5 + size * 0.4), 0.5)
+		shake((1 - distance / reach) * (1.5 + size * 0.45), 0.5)
+	end
+	if distance > 400 then
+		return
+	end
+
+	ring(position + Vector3.new(0, 0.3, 0), color, 2, size * 9, 0.7)
+	ring(position + Vector3.new(0, 0.4, 0), Color3.fromRGB(255, 200, 120), 1, size * 5, 0.45)
+	flash(position + Vector3.new(0, 4, 0), color, size * 10, 6, 0.8)
+	burst(position + Vector3.new(0, 1, 0), color, 25 + size * 4, 0.9, 30)
+
+	-- Dust cloud
+	local dust = burst(position + Vector3.new(0, 1, 0), Color3.fromRGB(150, 130, 150), 14, size * 1.6, 12, SMOKE)
+	local emitter = dust:FindFirstChildOfClass("ParticleEmitter")
+	if emitter then
+		emitter.LightEmission = 0
+		emitter.Transparency = NumberSequence.new(0.4, 1)
+		emitter.Lifetime = NumberRange.new(1.2, 2)
+	end
+
+	-- Flying rocks
+	for _ = 1, math.floor(5 + size) do
+		local s = math.random() * 1.2 + 0.5
+		local rock = localPart({
+			Size = Vector3.new(s, s * 0.8, s),
+			Position = position + Vector3.new(math.random(-2, 2), 2, math.random(-2, 2)),
+			Material = Enum.Material.Basalt,
+			Color = Color3.fromRGB(60, 50, 50),
+			Anchored = false,
+			CanCollide = true,
+		})
+		local direction = Vector3.new(math.random() - 0.5, 0, math.random() - 0.5)
+		if direction.Magnitude < 0.05 then
+			direction = Vector3.new(1, 0, 0)
+		end
+		rock.AssemblyLinearVelocity = direction.Unit * math.random(20, 45) + Vector3.new(0, math.random(35, 60), 0)
+		rock.AssemblyAngularVelocity = Vector3.new(math.random(-10, 10), math.random(-10, 10), math.random(-10, 10))
+		TweenService:Create(rock, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 1.6), {
+			Transparency = 1,
+		}):Play()
+		Debris:AddItem(rock, 2.8)
+	end
+end
+
+function HANDLERS.HatchFX(position, color, rarityIndex)
+	if distanceTo(position) > 300 then
+		return
+	end
+	rarityIndex = rarityIndex or 1
+	burst(position, color, 20 + rarityIndex * 8, 1 + rarityIndex * 0.15, 20)
+	ring(position - Vector3.new(0, 1.5, 0), color, 2, 10 + rarityIndex * 2, 0.6)
+	flash(position, color, 18 + rarityIndex * 4, 5, 1)
+	if rarityIndex >= 5 then
+		local pillar = localPart({
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(120, 3, 3),
+			CFrame = CFrame.new(position + Vector3.new(0, 58, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+			Material = Enum.Material.Neon,
+			Color = color,
+			Transparency = 0.2,
+		})
+		TweenService:Create(pillar, TweenInfo.new(1.6, Enum.EasingStyle.Quad), {
+			Size = Vector3.new(120, 10, 10),
+			Transparency = 1,
+		}):Play()
+		Debris:AddItem(pillar, 1.7)
 	end
 end
 
 function HANDLERS.Collect(amount)
-	UI.FloatText("+" .. Util.FormatMoney(amount), Color3.fromRGB(120, 255, 120), false)
+	UI.FloatText("+" .. Util.FormatMoney(amount), Color3.fromRGB(130, 255, 130), false)
+	UI.CoinBurst()
 	play("Collect", 0.4)
 end
 
 function HANDLERS.Speed(gain)
-	UI.FloatText("+" .. gain .. " ⚡", Color3.fromRGB(120, 220, 255), true)
+	UI.FloatText("+" .. gain .. " ⚡", Color3.fromRGB(130, 225, 255), true)
 end
 
 function HANDLERS.Grab()
@@ -125,17 +253,17 @@ end
 function HANDLERS.Deposit()
 	play("Deposit", 0.35)
 	UI.Popup("Delivered! ☄️", Color3.fromRGB(120, 255, 160))
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if root then
+		burst(root.Position + Vector3.new(0, 3, 0), Color3.fromRGB(120, 255, 160), 25, 1, 16)
+	end
 end
 
 function HANDLERS.Hatch(id, rarityName, mutation)
-	local rarity = Util.GetRarity(rarityName)
 	local rarityIndex = Config.RarityIndex[rarityName] or 1
-	if rarityIndex >= 4 or mutation then
-		local text = "🐣 " .. id .. "!"
-		if mutation then
-			text = "🐣 " .. string.upper(mutation) .. " " .. id .. "!"
-		end
-		UI.Popup(text, rarity.Color)
+	if rarityIndex >= 3 or mutation then
+		UI.HatchCard(id, rarityName, mutation)
 		play("Hatch", 0.5)
 		if rarityIndex >= 6 then
 			shake(2, 0.6)
@@ -144,10 +272,11 @@ function HANDLERS.Hatch(id, rarityName, mutation)
 end
 
 function HANDLERS.Discovered(id, rarityName)
-	-- Wait for the hatch popup to finish first
-	task.delay(1.8, function()
-		UI.Popup("📖 NEW: " .. id, Util.GetRarity(rarityName).Color)
-	end)
+	if not UI.MarkNew(id) then
+		task.delay(0.3, function()
+			UI.Popup("📖 NEW: " .. id, Util.GetRarity(rarityName).Color)
+		end)
+	end
 end
 
 function HANDLERS.Alarm()
@@ -174,8 +303,10 @@ local function onKnockback(velocity, stunTime)
 	end
 	humanoid.PlatformStand = true
 	root.AssemblyLinearVelocity = velocity
+	root.AssemblyAngularVelocity = Vector3.new(math.random(-6, 6), 0, math.random(-6, 6))
 	play("Ouch", 0.6)
-	shake(2.5, 0.35)
+	shake(3, 0.4)
+	UI.Flash(Color3.fromRGB(255, 255, 255))
 	task.delay(stunTime or 0.8, function()
 		if humanoid.Parent and humanoid.Health > 0 then
 			humanoid.PlatformStand = false
@@ -186,6 +317,10 @@ end
 
 function Effects.Init(ui)
 	UI = ui
+	fxFolder = Instance.new("Folder")
+	fxFolder.Name = "LocalFX"
+	fxFolder.Parent = workspace
+
 	for name, id in SOUND_IDS do
 		local sound = Instance.new("Sound")
 		sound.Name = "Fx_" .. name
