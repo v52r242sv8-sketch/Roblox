@@ -1,0 +1,5275 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<Item class="ReplicatedStorage" referent="RBXD6985506253043C8A36926B496485601">
+		<Properties>
+			<string name="Name">ReplicatedStorage</string>
+		</Properties>
+		<Item class="Folder" referent="RBX60C48289207D4475868B3F18E69D8225">
+			<Properties>
+				<string name="Name">Shared</string>
+			</Properties>
+			<Item class="ModuleScript" referent="RBX29E8038D8D0E4C98BBE6E32403CF178C">
+				<Properties>
+					<string name="Name">Config</string>
+					<ProtectedString name="Source"><![CDATA[-- Config: every balance number for Steal a Meteor lives here.
+-- Change values here instead of hunting through the scripts.
+
+local Config = {}
+
+Config.GameName = "Steal a Meteor"
+Config.DataStoreName = "StealAMeteor_v1"
+Config.AutosaveInterval = 90
+
+-- Speed ("+1 speed every second" on your Speed Pad)
+Config.StartSpeed = 16
+Config.MaxSpeed = 250
+Config.PadBaseRate = 1 -- speed per second while standing on your own Speed Pad
+
+-- Speed Boots upgrade: each level adds +1 speed/sec on the pad
+Config.Boots = {
+	MaxLevel = 12,
+	BaseCost = 400,
+	CostMult = 3,
+}
+
+-- Pedestals (slots on your base)
+Config.PhysicalPedestals = 16 -- pedestals that exist on every plot
+Config.StartPedestals = 6
+Config.MaxBuyablePedestals = 14 -- VIP unlocks the last 2
+Config.VipBonusPedestals = 2
+Config.PedestalBaseCost = 750
+Config.PedestalCostMult = 2.6
+
+-- Rebirth: resets cash, speed and boots; keeps your Meteorlings and Index
+Config.Rebirth = {
+	BaseCost = 150000,
+	CostMult = 6,
+	BonusPerRebirth = 0.5, -- +50% income per rebirth
+}
+
+-- Index: each discovered Meteorling gives a permanent income bonus
+Config.IndexBonusPerEntry = 0.02
+
+-- Offline earnings
+Config.OfflineCapSeconds = 2 * 60 * 60
+Config.OfflineRate = 0.25
+
+-- Selling
+Config.SellHatchedSeconds = 20 -- sell price = income/sec * this
+Config.SellMeteorMult = 0.25 -- unhatched meteors sell for less
+
+-- Base lock (laser gate)
+Config.Lock = {
+	Duration = 45,
+	VipDuration = 60,
+	Cooldown = 60,
+}
+
+-- Hammer ("Bonk")
+Config.Bonk = {
+	Range = 9,
+	BigRange = 14,
+	Cooldown = 1.2,
+	BigCooldown = 0.8,
+	Knockback = 55,
+	StunTime = 0.9,
+}
+
+-- Rarities, from worst to best
+Config.Rarities = {
+	{ Name = "Common", Color = Color3.fromRGB(205, 205, 205), HatchTime = 10, Weight = 0.05, Size = 2.6, GrabTime = 0.25 },
+	{ Name = "Uncommon", Color = Color3.fromRGB(85, 220, 110), HatchTime = 20, Weight = 0.08, Size = 3.0, GrabTime = 0.3 },
+	{ Name = "Rare", Color = Color3.fromRGB(70, 150, 255), HatchTime = 40, Weight = 0.12, Size = 3.5, GrabTime = 0.4 },
+	{ Name = "Epic", Color = Color3.fromRGB(170, 85, 255), HatchTime = 75, Weight = 0.17, Size = 4.0, GrabTime = 0.5 },
+	{ Name = "Legendary", Color = Color3.fromRGB(255, 170, 30), HatchTime = 150, Weight = 0.22, Size = 4.8, GrabTime = 0.7 },
+	{ Name = "Mythic", Color = Color3.fromRGB(255, 60, 110), HatchTime = 300, Weight = 0.28, Size = 5.6, GrabTime = 0.9 },
+	{ Name = "Cosmic", Color = Color3.fromRGB(0, 240, 255), HatchTime = 600, Weight = 0.35, Size = 6.6, GrabTime = 1.2 },
+	{ Name = "Secret", Color = Color3.fromRGB(20, 20, 30), HatchTime = 900, Weight = 0.42, Size = 7.8, GrabTime = 1.5 },
+}
+
+Config.RarityIndex = {}
+for i, rarity in Config.Rarities do
+	Config.RarityIndex[rarity.Name] = i
+end
+
+-- Mutations are rolled when a meteor hatches (luck increases the chance).
+-- Listed rarest first: the roll checks them in this order.
+Config.Mutations = {
+	{ Name = "Void", Mult = 10, Chance = 0.002, Color = Color3.fromRGB(110, 0, 200) },
+	{ Name = "Rainbow", Mult = 5, Chance = 0.01, Color = Color3.fromRGB(255, 90, 200) },
+	{ Name = "Golden", Mult = 2, Chance = 0.04, Color = Color3.fromRGB(255, 205, 40) },
+}
+
+Config.MutationByName = {}
+for _, mutation in Config.Mutations do
+	Config.MutationByName[mutation.Name] = mutation
+end
+
+-- Meteorlings: the creatures that hatch out of meteors.
+-- Feature controls the little model detail (Ears, Horns, Wings, Antenna, Crown, Fins).
+Config.Meteorlings = {
+	{ Id = "Pebblit", Rarity = "Common", Income = 2, Color = Color3.fromRGB(150, 140, 130), Feature = "Ears" },
+	{ Id = "Dustbun", Rarity = "Common", Income = 3, Color = Color3.fromRGB(220, 200, 170), Feature = "Ears" },
+	{ Id = "Rocklet", Rarity = "Common", Income = 4, Color = Color3.fromRGB(110, 110, 120), Feature = "Horns" },
+
+	{ Id = "Glowmite", Rarity = "Uncommon", Income = 8, Color = Color3.fromRGB(140, 255, 120), Feature = "Antenna" },
+	{ Id = "Moonsnail", Rarity = "Uncommon", Income = 11, Color = Color3.fromRGB(200, 220, 255), Feature = "Antenna" },
+	{ Id = "Fizzlefly", Rarity = "Uncommon", Income = 14, Color = Color3.fromRGB(255, 240, 120), Feature = "Wings" },
+
+	{ Id = "Craterpup", Rarity = "Rare", Income = 35, Color = Color3.fromRGB(180, 120, 80), Feature = "Ears" },
+	{ Id = "Sparkat", Rarity = "Rare", Income = 45, Color = Color3.fromRGB(90, 170, 255), Feature = "Ears" },
+	{ Id = "Cometoad", Rarity = "Rare", Income = 60, Color = Color3.fromRGB(60, 200, 160), Feature = "Antenna" },
+
+	{ Id = "Novabun", Rarity = "Epic", Income = 160, Color = Color3.fromRGB(255, 150, 220), Feature = "Ears" },
+	{ Id = "Lunamoth", Rarity = "Epic", Income = 210, Color = Color3.fromRGB(190, 160, 255), Feature = "Wings" },
+	{ Id = "Orbitron", Rarity = "Epic", Income = 275, Color = Color3.fromRGB(120, 120, 255), Feature = "Antenna" },
+
+	{ Id = "Quasarfox", Rarity = "Legendary", Income = 900, Color = Color3.fromRGB(255, 130, 40), Feature = "Ears" },
+	{ Id = "Solflare Drake", Rarity = "Legendary", Income = 1200, Color = Color3.fromRGB(255, 90, 30), Feature = "Wings" },
+	{ Id = "Nebulynx", Rarity = "Legendary", Income = 1600, Color = Color3.fromRGB(150, 60, 255), Feature = "Horns" },
+
+	{ Id = "Eclipsoid", Rarity = "Mythic", Income = 6000, Color = Color3.fromRGB(40, 30, 60), Feature = "Crown" },
+	{ Id = "Starwhale", Rarity = "Mythic", Income = 8500, Color = Color3.fromRGB(60, 120, 255), Feature = "Fins" },
+	{ Id = "Pulsaroo", Rarity = "Mythic", Income = 11000, Color = Color3.fromRGB(255, 60, 140), Feature = "Ears" },
+
+	{ Id = "Galaxeon", Rarity = "Cosmic", Income = 45000, Color = Color3.fromRGB(90, 40, 200), Feature = "Wings" },
+	{ Id = "Voidmaw", Rarity = "Cosmic", Income = 65000, Color = Color3.fromRGB(20, 0, 40), Feature = "Horns" },
+	{ Id = "Chronostar", Rarity = "Cosmic", Income = 90000, Color = Color3.fromRGB(0, 220, 255), Feature = "Crown" },
+
+	{ Id = "The Singularity", Rarity = "Secret", Income = 500000, Color = Color3.fromRGB(10, 10, 10), Feature = "Crown" },
+	{ Id = "Big Bang Bob", Rarity = "Secret", Income = 750000, Color = Color3.fromRGB(255, 255, 255), Feature = "Horns" },
+	{ Id = "Mr. Supernova", Rarity = "Secret", Income = 1200000, Color = Color3.fromRGB(255, 220, 80), Feature = "Crown" },
+}
+
+Config.MeteorlingById = {}
+Config.MeteorlingsByRarity = {}
+for _, info in Config.Meteorlings do
+	Config.MeteorlingById[info.Id] = info
+	Config.MeteorlingsByRarity[info.Rarity] = Config.MeteorlingsByRarity[info.Rarity] or {}
+	table.insert(Config.MeteorlingsByRarity[info.Rarity], info)
+end
+
+-- Map
+Config.MapHalfWidth = 210
+Config.PlotSize = Vector3.new(60, 0, 70)
+Config.PlotCount = 6
+Config.PlotSpacing = 70
+Config.PlotCenterZ = -40
+
+-- Zones in front of the bases. Further zone = rarer meteors, higher speed needed.
+Config.Zones = {
+	{
+		Name = "Meadow",
+		ZMin = 70,
+		ZMax = 220,
+		Speed = 0,
+		Color = Color3.fromRGB(95, 170, 80),
+		Material = Enum.Material.Grass,
+		Interval = 4,
+		MaxActive = 12,
+		Weights = { Common = 70, Uncommon = 25, Rare = 5 },
+	},
+	{
+		Name = "Crater Dunes",
+		ZMin = 240,
+		ZMax = 400,
+		Speed = 40,
+		Color = Color3.fromRGB(225, 190, 120),
+		Material = Enum.Material.Sand,
+		Interval = 6,
+		MaxActive = 8,
+		Weights = { Uncommon = 40, Rare = 40, Epic = 18, Legendary = 2 },
+	},
+	{
+		Name = "Lava Rift",
+		ZMin = 420,
+		ZMax = 590,
+		Speed = 90,
+		Color = Color3.fromRGB(60, 45, 45),
+		Material = Enum.Material.Basalt,
+		Interval = 9,
+		MaxActive = 6,
+		Weights = { Epic = 45, Legendary = 40, Mythic = 13, Cosmic = 2 },
+	},
+	{
+		Name = "Cosmic Void",
+		ZMin = 610,
+		ZMax = 800,
+		Speed = 160,
+		Color = Color3.fromRGB(35, 20, 70),
+		Material = Enum.Material.Glass,
+		Interval = 13,
+		MaxActive = 4,
+		Weights = { Legendary = 35, Mythic = 45, Cosmic = 18, Secret = 2 },
+	},
+}
+
+-- Meteor behaviour
+Config.Meteor = {
+	WarningTime = 3, -- seconds the red impact circle shows before the hit
+	FallTime = 1.2,
+	GroundLifetime = 60, -- seconds an untouched meteor stays on the ground
+	DropLifetime = 45, -- seconds a dropped meteor stays before vanishing
+	StolenPenalty = 0.1, -- extra slowdown while carrying something stolen
+}
+
+-- Server events
+Config.Events = {
+	MinGap = 300,
+	MaxGap = 420,
+	ShowerDuration = 60,
+	ShowerSpawnMult = 3,
+	ShowerMutationMult = 2,
+	CometChance = 0.4, -- chance an automatic event is a Golden Comet instead of a shower
+}
+
+-- Monetization. Create the passes/products on the Creator Dashboard and paste the IDs here.
+-- An ID of 0 means "not set up yet": the button tells the player it is coming soon.
+Config.GamePasses = {
+	DoubleMoney = { Id = 0, Name = "2x Cash", Description = "Double all income forever.", Price = 199 },
+	DoubleSpeed = { Id = 0, Name = "2x Speed Pad", Description = "Your Speed Pad gives twice the speed.", Price = 149 },
+	VIP = { Id = 0, Name = "VIP", Description = "+2 pedestals, +25% luck, longer base lock, gold tag.", Price = 299 },
+	AutoCollect = { Id = 0, Name = "Auto Collect", Description = "Cash goes straight to your wallet.", Price = 99 },
+	BigHammer = { Id = 0, Name = "Mega Hammer", Description = "Bigger bonk range, faster swings.", Price = 129 },
+}
+
+Config.Products = {
+	SpeedBoost = { Id = 0, Name = "+50 Speed", Description = "Instantly gain 50 speed.", Price = 25 },
+	InstantHatch = { Id = 0, Name = "Instant Hatch", Description = "Hatch every meteor on your base now.", Price = 49 },
+	Luck = { Id = 0, Name = "2x Luck (15 min)", Description = "Double mutation luck for 15 minutes.", Price = 59 },
+	MeteorShower = { Id = 0, Name = "Summon Meteor Shower", Description = "Start a server-wide meteor shower. Everyone sees your name!", Price = 99 },
+	GoldenComet = { Id = 0, Name = "Summon Golden Comet", Description = "Drop a guaranteed Golden comet. The whole server will race for it!", Price = 149 },
+}
+
+Config.LuckDuration = 15 * 60
+Config.VipLuck = 1.25
+
+return Config
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXC3556A4096DD429FB10AA70B8E4018CE">
+				<Properties>
+					<string name="Name">Remotes</string>
+					<ProtectedString name="Source"><![CDATA[-- Creates (server) or waits for (client) every remote the game uses.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local EVENTS = {
+	"Notify", -- server -> client: toast message
+	"Sync", -- server -> client: player state snapshot
+	"Banner", -- server -> all: big event banner
+	"Knockback", -- server -> client: you got bonked
+	"Effect", -- server -> client: small visual/sound cue
+}
+
+local FUNCTIONS = {
+	"Request", -- client -> server: shop / rebirth actions
+}
+
+local Remotes = {}
+
+if RunService:IsServer() then
+	local folder = ReplicatedStorage:FindFirstChild("Remotes")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "Remotes"
+		folder.Parent = ReplicatedStorage
+	end
+	for _, name in EVENTS do
+		local remote = folder:FindFirstChild(name)
+		if not remote then
+			remote = Instance.new("RemoteEvent")
+			remote.Name = name
+			remote.Parent = folder
+		end
+		Remotes[name] = remote
+	end
+	for _, name in FUNCTIONS do
+		local remote = folder:FindFirstChild(name)
+		if not remote then
+			remote = Instance.new("RemoteFunction")
+			remote.Name = name
+			remote.Parent = folder
+		end
+		Remotes[name] = remote
+	end
+else
+	local folder = ReplicatedStorage:WaitForChild("Remotes")
+	for _, name in EVENTS do
+		Remotes[name] = folder:WaitForChild(name)
+	end
+	for _, name in FUNCTIONS do
+		Remotes[name] = folder:WaitForChild(name)
+	end
+end
+
+return Remotes
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX77157DB0B66D4E6EB447044BBFC10243">
+				<Properties>
+					<string name="Name">Util</string>
+					<ProtectedString name="Source"><![CDATA[-- Small helpers shared by server and client.
+
+local Config = require(script.Parent.Config)
+
+local Util = {}
+
+local SUFFIXES = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc" }
+
+function Util.FormatNumber(value)
+	local n = tonumber(value) or 0
+	local negative = n < 0
+	if negative then
+		n = -n
+	end
+
+	local text
+	if n < 1000 then
+		text = tostring(math.floor(n))
+	else
+		local index = 1
+		while n >= 1000 and index < #SUFFIXES do
+			n = n / 1000
+			index += 1
+		end
+		if n >= 100 then
+			text = string.format("%.0f", n)
+		elseif n >= 10 then
+			text = string.format("%.1f", n)
+		else
+			text = string.format("%.2f", n)
+		end
+		if string.find(text, "%.") then
+			text = string.gsub(text, "0+$", "")
+			text = string.gsub(text, "%.$", "")
+		end
+		text ..= SUFFIXES[index]
+	end
+
+	if negative then
+		return "-" .. text
+	end
+	return text
+end
+
+function Util.FormatMoney(value)
+	return "$" .. Util.FormatNumber(value)
+end
+
+function Util.FormatTime(seconds)
+	local s = math.max(0, math.floor(seconds))
+	local h = math.floor(s / 3600)
+	local m = math.floor((s % 3600) / 60)
+	local sec = s % 60
+	if h > 0 then
+		return string.format("%dh %02dm", h, m)
+	elseif m > 0 then
+		return string.format("%dm %02ds", m, sec)
+	end
+	return string.format("%ds", sec)
+end
+
+function Util.GetRarity(name)
+	return Config.Rarities[Config.RarityIndex[name] or 1]
+end
+
+function Util.GetMeteorling(id)
+	return Config.MeteorlingById[id]
+end
+
+-- Income per second of one item, before player multipliers.
+function Util.ItemIncome(item)
+	local info = Config.MeteorlingById[item.id]
+	if not info then
+		return 0
+	end
+	local mult = 1
+	if item.mut and Config.MutationByName[item.mut] then
+		mult = Config.MutationByName[item.mut].Mult
+	end
+	return info.Income * mult
+end
+
+function Util.BootsCost(level)
+	return math.floor(Config.Boots.BaseCost * Config.Boots.CostMult ^ level)
+end
+
+function Util.PedestalCost(owned)
+	return math.floor(Config.PedestalBaseCost * Config.PedestalCostMult ^ (owned - Config.StartPedestals))
+end
+
+function Util.RebirthCost(rebirths)
+	return math.floor(Config.Rebirth.BaseCost * Config.Rebirth.CostMult ^ rebirths)
+end
+
+function Util.RebirthMultiplier(rebirths)
+	return 1 + Config.Rebirth.BonusPerRebirth * rebirths
+end
+
+-- Weighted random pick from a { key = weight } table.
+function Util.WeightedPick(weights, rng)
+	local total = 0
+	for _, weight in weights do
+		total += weight
+	end
+	local roll
+	if rng then
+		roll = rng:NextNumber() * total
+	else
+		roll = math.random() * total
+	end
+	local fallback = nil
+	for key, weight in weights do
+		fallback = key
+		roll -= weight
+		if roll <= 0 then
+			return key
+		end
+	end
+	return fallback
+end
+
+function Util.CountKeys(tbl)
+	local count = 0
+	for _ in tbl do
+		count += 1
+	end
+	return count
+end
+
+return Util
+]]></ProtectedString>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+	<Item class="ServerScriptService" referent="RBX19339CC9B9FF4ECBA69E06ED48DFF04D">
+		<Properties>
+			<string name="Name">ServerScriptService</string>
+		</Properties>
+		<Item class="Folder" referent="RBX40BF6C1AA8CA405FA3B7BD08A2B60D6F">
+			<Properties>
+				<string name="Name">Server</string>
+			</Properties>
+			<Item class="Script" referent="RBX39182BFBAB2E42C1972A203904C082C4">
+				<Properties>
+					<string name="Name">Main</string>
+					<ProtectedString name="Source"><![CDATA[-- Steal a Meteor: server entry point.
+-- Builds the map, starts every service and handles players joining/leaving.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Util = require(Shared.Util)
+local Remotes = require(Shared.Remotes)
+
+local Modules = script.Parent:WaitForChild("Modules")
+local ServiceFolder = script.Parent:WaitForChild("Services")
+
+local MapBuilder = require(Modules.MapBuilder)
+
+local Services = {}
+Services.Map = MapBuilder.Build()
+
+function Services.Notify(player, text, color)
+	Remotes.Notify:FireClient(player, text, color)
+end
+
+function Services.NotifyAll(text, color)
+	Remotes.Notify:FireAllClients(text, color)
+end
+
+local ORDER = { "Data", "Player", "Plot", "Meteor", "Combat", "Shop", "Event" }
+local FILES = {
+	Data = "DataService",
+	Player = "PlayerService",
+	Plot = "PlotService",
+	Meteor = "MeteorService",
+	Combat = "CombatService",
+	Shop = "ShopService",
+	Event = "EventService",
+}
+
+for _, name in ORDER do
+	Services[name] = require(ServiceFolder:WaitForChild(FILES[name]))
+end
+for _, name in ORDER do
+	Services[name].Init(Services)
+end
+for _, name in ORDER do
+	Services[name].Start()
+end
+
+local function giveOfflineEarnings(player, data)
+	if data.LastOnline <= 0 then
+		return
+	end
+	local away = math.min(os.time() - data.LastOnline, Config.OfflineCapSeconds)
+	if away < 60 then
+		return
+	end
+	local income = Services.Plot.GetIncome(player)
+	local earned = math.floor(income * away * Config.OfflineRate)
+	if earned > 0 then
+		data.Bank += earned
+		Services.Notify(
+			player,
+			"Welcome back! Your Meteorlings earned " .. Util.FormatMoney(earned) .. " while you were away.",
+			Color3.fromRGB(120, 255, 160)
+		)
+	end
+end
+
+local function onPlayerAdded(player)
+	local profile = Services.Data.Load(player)
+	if not player.Parent then
+		Services.Data.Remove(player)
+		return
+	end
+	if not profile.CanSave then
+		Services.Notify(player, "Saving is unavailable right now. Progress in this session will not be saved.", Color3.fromRGB(255, 160, 80))
+	end
+
+	Services.Player.Setup(player)
+	Services.Plot.Assign(player)
+	giveOfflineEarnings(player, profile.Data)
+	Services.Data.MarkDirty(player)
+
+	task.delay(2, function()
+		if player.Parent then
+			Services.Notify(player, "Grab meteors, bring them home, bonk thieves!", Color3.fromRGB(255, 220, 120))
+		end
+	end)
+end
+
+local function onPlayerRemoving(player)
+	Services.Meteor.OnPlayerRemoving(player)
+	Services.Plot.Release(player)
+	Services.Data.Save(player)
+	Services.Data.Remove(player)
+	Services.Player.Cleanup(player)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+Players.PlayerRemoving:Connect(onPlayerRemoving)
+for _, player in Players:GetPlayers() do
+	task.spawn(onPlayerAdded, player)
+end
+
+game:BindToClose(function()
+	Services.Data.SaveAll()
+end)
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="Folder" referent="RBX893C997A4E4C47E695E78486A2593F18">
+				<Properties>
+					<string name="Name">Modules</string>
+				</Properties>
+				<Item class="ModuleScript" referent="RBX7D8C3582AA88470C8CF16538057B4D74">
+					<Properties>
+						<string name="Name">MapBuilder</string>
+						<ProtectedString name="Source"><![CDATA[-- MapBuilder: generates the whole map in code, so the place works from an empty baseplate.
+-- Layout (top view, +Z goes "forward"):
+--   z = -75..-5   : row of player bases (plots)
+--   z =  -5..62   : hub with the spawn
+--   z =  62..800  : meteor zones, each further one behind a speed gate
+
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+
+local MapBuilder = {}
+
+local FONT = Enum.Font.FredokaOne
+local W = Config.MapHalfWidth
+
+local PLOT_COLORS = {
+	Color3.fromRGB(255, 120, 120),
+	Color3.fromRGB(255, 190, 90),
+	Color3.fromRGB(120, 220, 120),
+	Color3.fromRGB(100, 180, 255),
+	Color3.fromRGB(190, 130, 255),
+	Color3.fromRGB(255, 130, 210),
+}
+
+local function part(props, parent)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	for key, value in props do
+		p[key] = value
+	end
+	p.Parent = parent
+	return p
+end
+
+local function billboard(parent, text, size, offset, color, maxDistance)
+	local gui = Instance.new("BillboardGui")
+	gui.Size = size
+	gui.StudsOffsetWorldSpace = offset
+	gui.LightInfluence = 0
+	gui.MaxDistance = maxDistance or 250
+	gui.Parent = parent
+	local lbl = Instance.new("TextLabel")
+	lbl.Name = "Text"
+	lbl.Size = UDim2.fromScale(1, 1)
+	lbl.BackgroundTransparency = 1
+	lbl.Font = FONT
+	lbl.TextScaled = true
+	lbl.Text = text
+	lbl.TextColor3 = color or Color3.new(1, 1, 1)
+	lbl.TextStrokeTransparency = 0
+	lbl.Parent = gui
+	return gui, lbl
+end
+
+local function flatCylinder(props, parent)
+	-- Cylinders point along X; rotate so the flat face looks up.
+	local position = props.Position
+	props.Position = nil
+	local p = part(props, parent)
+	p.Shape = Enum.PartType.Cylinder
+	p.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
+	return p
+end
+
+local function setupLighting()
+	Lighting.ClockTime = 17.6
+	Lighting.Brightness = 2.2
+	Lighting.Ambient = Color3.fromRGB(70, 60, 90)
+	Lighting.OutdoorAmbient = Color3.fromRGB(120, 110, 150)
+	Lighting.EnvironmentDiffuseScale = 0.5
+	Lighting.EnvironmentSpecularScale = 0.5
+
+	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
+	atmosphere.Density = 0.32
+	atmosphere.Offset = 0.2
+	atmosphere.Color = Color3.fromRGB(200, 170, 255)
+	atmosphere.Decay = Color3.fromRGB(110, 80, 160)
+	atmosphere.Glare = 0.3
+	atmosphere.Haze = 1.2
+	atmosphere.Parent = Lighting
+
+	local bloom = Lighting:FindFirstChildOfClass("BloomEffect") or Instance.new("BloomEffect")
+	bloom.Intensity = 0.8
+	bloom.Size = 30
+	bloom.Threshold = 0.9
+	bloom.Parent = Lighting
+
+	local color = Lighting:FindFirstChildOfClass("ColorCorrectionEffect") or Instance.new("ColorCorrectionEffect")
+	color.Saturation = 0.15
+	color.Contrast = 0.08
+	color.Parent = Lighting
+end
+
+local function buildTree(rng, position, parent)
+	local height = rng:NextNumber(7, 11)
+	part({
+		Name = "Trunk",
+		Size = Vector3.new(1.6, height, 1.6),
+		Position = position + Vector3.new(0, height / 2, 0),
+		Material = Enum.Material.Wood,
+		Color = Color3.fromRGB(105, 70, 45),
+	}, parent)
+	local leaf = rng:NextNumber(7, 11)
+	part({
+		Name = "Leaves",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(leaf, leaf, leaf),
+		Position = position + Vector3.new(0, height + leaf * 0.3, 0),
+		Material = Enum.Material.Grass,
+		Color = Color3.fromRGB(70 + rng:NextInteger(0, 40), 160 + rng:NextInteger(0, 40), 70),
+		CanCollide = false,
+	}, parent)
+end
+
+local function buildPlot(index, parent)
+	local cx = (index - (Config.PlotCount + 1) / 2) * Config.PlotSpacing
+	local cz = Config.PlotCenterZ
+	local halfX = Config.PlotSize.X / 2
+	local halfZ = Config.PlotSize.Z / 2
+	local color = PLOT_COLORS[(index - 1) % #PLOT_COLORS + 1]
+
+	local model = Instance.new("Model")
+	model.Name = "Plot" .. index
+	model:SetAttribute("PlotIndex", index)
+	model:SetAttribute("Owner", 0)
+	model.Parent = parent
+
+	local floor = part({
+		Name = "Floor",
+		Size = Vector3.new(Config.PlotSize.X, 0.5, Config.PlotSize.Z),
+		Position = Vector3.new(cx, 0.25, cz),
+		Material = Enum.Material.SmoothPlastic,
+		Color = color:Lerp(Color3.fromRGB(40, 40, 50), 0.55),
+	}, model)
+
+	-- Border trim
+	part({
+		Name = "Trim",
+		Size = Vector3.new(Config.PlotSize.X, 0.2, 1),
+		Position = Vector3.new(cx, 0.6, cz + halfZ - 0.5),
+		Material = Enum.Material.Neon,
+		Color = color,
+		CanCollide = false,
+	}, model)
+
+	-- Walls (back + sides). The front stays open for the laser gate.
+	local wallColor = color:Lerp(Color3.fromRGB(30, 30, 40), 0.35)
+	part({
+		Name = "BackWall",
+		Size = Vector3.new(Config.PlotSize.X, 9, 1),
+		Position = Vector3.new(cx, 4.5, cz - halfZ),
+		Material = Enum.Material.SmoothPlastic,
+		Color = wallColor,
+	}, model)
+	for _, side in { -1, 1 } do
+		part({
+			Name = "SideWall",
+			Size = Vector3.new(1, 6, Config.PlotSize.Z),
+			Position = Vector3.new(cx + side * halfX, 3, cz),
+			Material = Enum.Material.SmoothPlastic,
+			Color = wallColor,
+		}, model)
+	end
+
+	local laser = part({
+		Name = "Laser",
+		Size = Vector3.new(Config.PlotSize.X - 1, 8, 0.4),
+		Position = Vector3.new(cx, 4, cz + halfZ),
+		Material = Enum.Material.Neon,
+		Color = Color3.fromRGB(255, 40, 60),
+		Transparency = 1,
+		CanCollide = false,
+		CanTouch = false,
+		CanQuery = false,
+	}, model)
+
+	-- Owner sign on the back wall
+	local signPart = part({
+		Name = "Sign",
+		Size = Vector3.new(30, 6, 1),
+		Position = Vector3.new(cx, 12, cz - halfZ),
+		Material = Enum.Material.SmoothPlastic,
+		Color = Color3.fromRGB(25, 25, 35),
+	}, model)
+	local _, signLabel = billboard(signPart, "Empty Base", UDim2.new(30, 0, 6, 0), Vector3.new(0, 0, 0), color, 300)
+
+	-- Pedestals: 4 columns x 4 rows, filled from the back row
+	local pedestals = {}
+	local cols = { -21, -7, 7, 21 }
+	local rows = { -20, -7, 6, 19 }
+	local n = 0
+	for _, rz in rows do
+		for _, rx in cols do
+			n += 1
+			local pedestal = flatCylinder({
+				Name = "Pedestal" .. n,
+				Size = Vector3.new(1.2, 7, 7),
+				Position = Vector3.new(cx + rx, 0.5 + 0.6, cz + rz),
+				Material = Enum.Material.SmoothPlastic,
+				Color = Color3.fromRGB(230, 230, 240),
+			}, model)
+			pedestal:SetAttribute("Slot", n)
+			local ring = flatCylinder({
+				Name = "Ring",
+				Size = Vector3.new(0.2, 7.6, 7.6),
+				Position = Vector3.new(cx + rx, 0.55, cz + rz),
+				Material = Enum.Material.Neon,
+				Color = color,
+				CanCollide = false,
+			}, model)
+			local lockGui = billboard(
+				pedestal,
+				"LOCKED",
+				UDim2.new(5, 0, 1.4, 0),
+				Vector3.new(0, 2, 0),
+				Color3.fromRGB(200, 200, 200),
+				80
+			)
+			lockGui.Name = "LockGui"
+			lockGui.Enabled = false
+			pedestals[n] = { Part = pedestal, Ring = ring, LockGui = lockGui }
+		end
+	end
+
+	-- Speed pad (back strip): "+1 speed every second"
+	local speedPad = part({
+		Name = "SpeedPad",
+		Size = Vector3.new(22, 0.3, 8),
+		Position = Vector3.new(cx, 0.65, cz - halfZ + 5.5),
+		Material = Enum.Material.Neon,
+		Color = Color3.fromRGB(60, 200, 255),
+		CanCollide = false,
+	}, model)
+	billboard(
+		speedPad,
+		"⚡ SPEED PAD ⚡\nstand here: +speed every second",
+		UDim2.new(16, 0, 3.5, 0),
+		Vector3.new(0, 3.2, 0),
+		Color3.fromRGB(150, 230, 255),
+		120
+	)
+
+	-- Collect pad (front left)
+	local collectPad = part({
+		Name = "CollectPad",
+		Size = Vector3.new(11, 0.3, 8),
+		Position = Vector3.new(cx - 17, 0.65, cz + halfZ - 6),
+		Material = Enum.Material.Neon,
+		Color = Color3.fromRGB(80, 230, 100),
+		CanCollide = false,
+	}, model)
+	local _, bankLabel = billboard(
+		collectPad,
+		"💰 $0\nstep to collect",
+		UDim2.new(10, 0, 3.5, 0),
+		Vector3.new(0, 3.2, 0),
+		Color3.fromRGB(170, 255, 170),
+		120
+	)
+
+	-- Lock pad (front right)
+	local lockPad = part({
+		Name = "LockPad",
+		Size = Vector3.new(9, 0.3, 8),
+		Position = Vector3.new(cx + 18, 0.65, cz + halfZ - 6),
+		Material = Enum.Material.Neon,
+		Color = Color3.fromRGB(255, 70, 80),
+		CanCollide = false,
+	}, model)
+	local _, lockLabel = billboard(
+		lockPad,
+		"🔒 LOCK BASE",
+		UDim2.new(9, 0, 2.5, 0),
+		Vector3.new(0, 3, 0),
+		Color3.fromRGB(255, 180, 180),
+		120
+	)
+
+	-- Where the carry beam points to
+	local depositAttachment = Instance.new("Attachment")
+	depositAttachment.Name = "DepositPoint"
+	depositAttachment.Position = Vector3.new(0, 3, 0)
+	depositAttachment.Parent = floor
+
+	local itemsFolder = Instance.new("Folder")
+	itemsFolder.Name = "Items"
+	itemsFolder.Parent = model
+
+	local spawnPos = Vector3.new(cx, 4, cz + halfZ - 14)
+
+	return {
+		Index = index,
+		Model = model,
+		Floor = floor,
+		Center = Vector3.new(cx, 0, cz),
+		HalfX = halfX,
+		HalfZ = halfZ,
+		Color = color,
+		Pedestals = pedestals,
+		SpeedPad = speedPad,
+		CollectPad = collectPad,
+		LockPad = lockPad,
+		Laser = laser,
+		SignLabel = signLabel,
+		BankLabel = bankLabel,
+		LockLabel = lockLabel,
+		ItemsFolder = itemsFolder,
+		SpawnCFrame = CFrame.lookAt(spawnPos, spawnPos + Vector3.new(0, 0, 1)),
+		Owner = nil,
+		Rendered = {},
+		Reserved = {},
+		LockedUntil = 0,
+		LockCooldownUntil = 0,
+	}
+end
+
+local function buildGate(zone, parent)
+	local gateZ = zone.ZMin - 10
+	local curtain = part({
+		Name = "Gate_" .. zone.Name,
+		Size = Vector3.new(W * 2, 16, 0.6),
+		Position = Vector3.new(0, 8, gateZ),
+		Material = Enum.Material.ForceField,
+		Color = Color3.fromRGB(80, 200, 255),
+		Transparency = 0.2,
+		CanCollide = false,
+		CanTouch = false,
+		CanQuery = false,
+	}, parent)
+	for _, x in { -140, 0, 140 } do
+		local anchor = part({
+			Name = "GateSign",
+			Size = Vector3.new(1, 1, 1),
+			Position = Vector3.new(x, 19, gateZ),
+			Transparency = 1,
+			CanCollide = false,
+			CanTouch = false,
+			CanQuery = false,
+		}, parent)
+		billboard(
+			anchor,
+			"⚡ " .. zone.Speed .. " SPEED ⚡\n" .. zone.Name,
+			UDim2.new(26, 0, 7, 0),
+			Vector3.new(0, 0, 0),
+			Color3.fromRGB(150, 230, 255),
+			400
+		)
+	end
+	return curtain
+end
+
+local function decorateZone(zoneIndex, zone, rng, parent, info)
+	local zMin = zone.ZMin
+	local zMax = zone.ZMax
+	if zoneIndex == 1 then
+		for _ = 1, 16 do
+			local x = rng:NextNumber(-W + 10, W - 10)
+			local z = rng:NextNumber(zMin, zMax)
+			buildTree(rng, Vector3.new(x, 0, z), parent)
+		end
+	elseif zoneIndex == 2 then
+		for _ = 1, 14 do
+			local size = rng:NextNumber(4, 10)
+			part({
+				Name = "Rock",
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.new(size, size, size),
+				Position = Vector3.new(rng:NextNumber(-W + 10, W - 10), size * 0.1, rng:NextNumber(zMin, zMax)),
+				Material = Enum.Material.Slate,
+				Color = Color3.fromRGB(150, 120, 90),
+			}, parent)
+		end
+		for _ = 1, 10 do
+			local d = rng:NextNumber(12, 24)
+			flatCylinder({
+				Name = "Crater",
+				Size = Vector3.new(0.2, d, d),
+				Position = Vector3.new(rng:NextNumber(-W + 15, W - 15), 0.1, rng:NextNumber(zMin, zMax)),
+				Material = Enum.Material.Sand,
+				Color = Color3.fromRGB(180, 140, 90),
+				CanCollide = false,
+			}, parent)
+		end
+	elseif zoneIndex == 3 then
+		for _ = 1, 12 do
+			local d = rng:NextNumber(14, 26)
+			local pos = Vector3.new(rng:NextNumber(-W + 20, W - 20), 0.15, rng:NextNumber(zMin + 15, zMax - 10))
+			local pool = flatCylinder({
+				Name = "Lava",
+				Size = Vector3.new(0.3, d, d),
+				Position = pos,
+				Material = Enum.Material.Neon,
+				Color = Color3.fromRGB(255, 100, 20),
+				CanCollide = false,
+			}, parent)
+			local light = Instance.new("PointLight")
+			light.Color = Color3.fromRGB(255, 120, 30)
+			light.Range = d
+			light.Brightness = 2
+			light.Parent = pool
+			table.insert(info.LavaPools, { Position = pos, Radius = d / 2 })
+		end
+		for _ = 1, 18 do
+			local h = rng:NextNumber(5, 14)
+			part({
+				Name = "Spike",
+				Size = Vector3.new(3, h, 3),
+				CFrame = CFrame.new(rng:NextNumber(-W + 10, W - 10), h / 2 - 1, rng:NextNumber(zMin, zMax))
+					* CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, 6), rng:NextNumber(-0.3, 0.3)),
+				Material = Enum.Material.Basalt,
+				Color = Color3.fromRGB(40, 30, 30),
+			}, parent)
+		end
+	elseif zoneIndex == 4 then
+		for z = zMin, zMax, 40 do
+			part({
+				Name = "GridLine",
+				Size = Vector3.new(W * 2, 0.1, 0.5),
+				Position = Vector3.new(0, 0.05, z),
+				Material = Enum.Material.Neon,
+				Color = Color3.fromRGB(150, 80, 255),
+				CanCollide = false,
+			}, parent)
+		end
+		for _ = 1, 20 do
+			local size = rng:NextNumber(3, 9)
+			part({
+				Name = "Orb",
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.new(size, size, size),
+				Position = Vector3.new(rng:NextNumber(-W, W), rng:NextNumber(30, 80), rng:NextNumber(zMin, zMax)),
+				Material = Enum.Material.Neon,
+				Color = Color3.fromHSV(rng:NextNumber(0.7, 0.9), 0.7, 1),
+				CanCollide = false,
+				CanQuery = false,
+				CanTouch = false,
+			}, parent)
+		end
+		local midZ = (zMin + zMax) / 2
+		for i, x in { -130, 0, 130 } do
+			local center = Vector3.new(x, 2.5, midZ + (i - 2) * 40)
+			local bar = part({
+				Name = "Sweeper",
+				Size = Vector3.new(70, 2, 2),
+				CFrame = CFrame.new(center),
+				Material = Enum.Material.Neon,
+				Color = Color3.fromRGB(255, 50, 200),
+				CanCollide = false,
+				CanTouch = false,
+				CanQuery = false,
+			}, parent)
+			part({
+				Name = "SweeperHub",
+				Shape = Enum.PartType.Cylinder,
+				Size = Vector3.new(5, 6, 6),
+				CFrame = CFrame.new(center - Vector3.new(0, 1, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+				Material = Enum.Material.Metal,
+				Color = Color3.fromRGB(60, 60, 80),
+			}, parent)
+			table.insert(info.Sweepers, { Part = bar, Center = center, Speed = 0.9 + i * 0.25, Angle = i })
+		end
+	end
+end
+
+function MapBuilder.Build()
+	setupLighting()
+
+	local mapFolder = Instance.new("Folder")
+	mapFolder.Name = "Map"
+	mapFolder.Parent = workspace
+
+	local meteorFolder = Instance.new("Folder")
+	meteorFolder.Name = "Meteors"
+	meteorFolder.Parent = workspace
+
+	local plotsFolder = Instance.new("Folder")
+	plotsFolder.Name = "Plots"
+	plotsFolder.Parent = workspace
+
+	local info = {
+		Folder = mapFolder,
+		MeteorFolder = meteorFolder,
+		Plots = {},
+		Zones = {},
+		LavaPools = {},
+		Sweepers = {},
+	}
+
+	-- Remove the default baseplate if the place has one
+	local baseplate = workspace:FindFirstChild("Baseplate")
+	if baseplate then
+		baseplate:Destroy()
+	end
+
+	local firstZ = Config.Zones[1].ZMin - 8
+	local backZ = Config.PlotCenterZ - Config.PlotSize.Z / 2 - 25
+	part({
+		Name = "BaseGround",
+		Size = Vector3.new(W * 2, 4, firstZ - backZ),
+		Position = Vector3.new(0, -2, (firstZ + backZ) / 2),
+		Material = Enum.Material.SmoothPlastic,
+		Color = Color3.fromRGB(70, 74, 96),
+	}, mapFolder)
+
+	part({
+		Name = "Road",
+		Size = Vector3.new(W * 2, 0.1, 40),
+		Position = Vector3.new(0, 0.05, 22),
+		Material = Enum.Material.SmoothPlastic,
+		Color = Color3.fromRGB(90, 95, 120),
+	}, mapFolder)
+
+	-- Zones
+	local rng = Random.new(1337)
+	local startZ = firstZ
+	for zoneIndex, zone in Config.Zones do
+		local endZ = zone.ZMax + 10
+		if zoneIndex == #Config.Zones then
+			endZ = zone.ZMax + 20
+		end
+		part({
+			Name = "Ground_" .. zone.Name,
+			Size = Vector3.new(W * 2, 4, endZ - startZ),
+			Position = Vector3.new(0, -2, (startZ + endZ) / 2),
+			Material = zone.Material,
+			Color = zone.Color,
+		}, mapFolder)
+
+		local zoneInfo = { Zone = zone, GateZ = nil }
+		if zone.Speed > 0 then
+			zoneInfo.Gate = buildGate(zone, mapFolder)
+			zoneInfo.GateZ = zone.ZMin - 10
+		end
+		info.Zones[zoneIndex] = zoneInfo
+
+		local decor = Instance.new("Folder")
+		decor.Name = "Decor_" .. zone.Name
+		decor.Parent = mapFolder
+		decorateZone(zoneIndex, zone, rng, decor, info)
+
+		local signAnchor = part({
+			Name = "ZoneSign",
+			Size = Vector3.new(1, 1, 1),
+			Position = Vector3.new(0, 30, zone.ZMin + 5),
+			Transparency = 1,
+			CanCollide = false,
+			CanTouch = false,
+			CanQuery = false,
+		}, mapFolder)
+		billboard(signAnchor, zone.Name, UDim2.new(40, 0, 8, 0), Vector3.new(0, 0, 0), Color3.new(1, 1, 1), 500)
+
+		startZ = endZ
+	end
+	info.FarZ = startZ
+
+	-- Invisible boundary walls
+	local length = info.FarZ - backZ
+	for _, side in { -1, 1 } do
+		part({
+			Name = "Boundary",
+			Size = Vector3.new(2, 120, length),
+			Position = Vector3.new(side * (W + 1), 60, (info.FarZ + backZ) / 2),
+			Transparency = 1,
+		}, mapFolder)
+	end
+	part({
+		Name = "Boundary",
+		Size = Vector3.new(W * 2, 120, 2),
+		Position = Vector3.new(0, 60, backZ - 1),
+		Transparency = 1,
+	}, mapFolder)
+	part({
+		Name = "Boundary",
+		Size = Vector3.new(W * 2, 120, 2),
+		Position = Vector3.new(0, 60, info.FarZ + 1),
+		Transparency = 1,
+	}, mapFolder)
+
+	-- Spawn hub
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "Spawn"
+	spawn.Anchored = true
+	spawn.Size = Vector3.new(14, 1, 14)
+	spawn.Position = Vector3.new(0, 0.5, 30)
+	spawn.Material = Enum.Material.Neon
+	spawn.Color = Color3.fromRGB(80, 200, 255)
+	spawn.Neutral = true
+	spawn.Duration = 0
+	spawn.TopSurface = Enum.SurfaceType.Smooth
+	spawn.Parent = mapFolder
+	info.Spawn = spawn
+
+	local titleAnchor = part({
+		Name = "Title",
+		Size = Vector3.new(1, 1, 1),
+		Position = Vector3.new(0, 22, 40),
+		Transparency = 1,
+		CanCollide = false,
+		CanTouch = false,
+		CanQuery = false,
+	}, mapFolder)
+	billboard(
+		titleAnchor,
+		"☄️ STEAL A METEOR ☄️",
+		UDim2.new(46, 0, 9, 0),
+		Vector3.new(0, 0, 0),
+		Color3.fromRGB(255, 220, 120),
+		300
+	)
+
+	-- Plots
+	for index = 1, Config.PlotCount do
+		info.Plots[index] = buildPlot(index, plotsFolder)
+	end
+
+	return info
+end
+
+return MapBuilder
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX427A572A3A624A47BBE24756E71CE0F1">
+					<Properties>
+						<string name="Name">Visuals</string>
+						<ProtectedString name="Source"><![CDATA[-- Visuals: builds every model in code (meteors, Meteorlings, hammer, effects),
+-- so the game needs no imported assets.
+
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Util = require(Shared.Util)
+
+local Visuals = {}
+
+local FONT = Enum.Font.FredokaOne
+
+local function make(className, props, parent)
+	local inst = Instance.new(className)
+	for key, value in props do
+		inst[key] = value
+	end
+	if parent then
+		inst.Parent = parent
+	end
+	return inst
+end
+Visuals.Make = make
+
+local function weld(part0, part1)
+	return make("WeldConstraint", { Part0 = part0, Part1 = part1 }, part1)
+end
+
+-- A part that is welded to a root and follows it around.
+-- The CFrame must be set BEFORE welding: setting CFrame on a welded part moves the whole assembly.
+local function attachedPart(root, props, cframe)
+	local part = make("Part", props)
+	part.Anchored = false
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CanQuery = false
+	part.Massless = true
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	part.CFrame = cframe
+	part.Parent = root.Parent
+	weld(root, part)
+	return part
+end
+
+local function newRoot(model, props)
+	local root = make("Part", props)
+	root.Name = "Root"
+	root.Anchored = true
+	root.CanCollide = false
+	root.CanTouch = false
+	root.CanQuery = true
+	root.TopSurface = Enum.SurfaceType.Smooth
+	root.BottomSurface = Enum.SurfaceType.Smooth
+	root.Parent = model
+	model.PrimaryPart = root
+	return root
+end
+
+local function label(parent, props)
+	local lbl = make("TextLabel", {
+		BackgroundTransparency = 1,
+		Font = FONT,
+		TextScaled = true,
+		TextColor3 = Color3.new(1, 1, 1),
+		TextStrokeTransparency = 0,
+		TextStrokeColor3 = Color3.new(0, 0, 0),
+	})
+	for key, value in props do
+		lbl[key] = value
+	end
+	lbl.Parent = parent
+	return lbl
+end
+Visuals.Label = label
+
+local function addMutationLook(model, root, item)
+	if not item.mut then
+		return
+	end
+	local mutation = Config.MutationByName[item.mut]
+	if not mutation then
+		return
+	end
+	make("Highlight", {
+		FillColor = mutation.Color,
+		FillTransparency = 0.55,
+		OutlineColor = mutation.Color,
+		OutlineTransparency = 0,
+		DepthMode = Enum.HighlightDepthMode.Occluded,
+	}, model)
+	make("ParticleEmitter", {
+		Color = ColorSequence.new(mutation.Color),
+		LightEmission = 1,
+		Rate = 10,
+		Lifetime = NumberRange.new(0.8, 1.4),
+		Speed = NumberRange.new(1, 3),
+		SpreadAngle = Vector2.new(180, 180),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) }),
+		Texture = "rbxasset://textures/particles/sparkles_main.dds",
+	}, root)
+end
+
+-- Billboard above an item: name, rarity, mutation, income or hatch timer.
+local function itemBillboard(root, item, height, showIncome)
+	local info = Config.MeteorlingById[item.id]
+	local rarity = Util.GetRarity(info.Rarity)
+
+	local gui = make("BillboardGui", {
+		Name = "ItemGui",
+		Size = UDim2.new(8, 0, 3.4, 0),
+		StudsOffsetWorldSpace = Vector3.new(0, height / 2 + 2.2, 0),
+		MaxDistance = 140,
+		LightInfluence = 0,
+		AlwaysOnTop = false,
+	}, root)
+
+	local list = make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Vertical,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		VerticalAlignment = Enum.VerticalAlignment.Bottom,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	})
+	list.Parent = gui
+
+	if item.mut then
+		local mutation = Config.MutationByName[item.mut]
+		label(gui, {
+			Name = "Mutation",
+			LayoutOrder = 1,
+			Size = UDim2.new(1, 0, 0.22, 0),
+			Text = string.upper(item.mut) .. " x" .. tostring(mutation and mutation.Mult or 1),
+			TextColor3 = mutation and mutation.Color or Color3.new(1, 1, 1),
+		})
+	end
+
+	local nameText = item.id
+	if not item.hatched then
+		nameText = rarity.Name .. " Meteor"
+	end
+	label(gui, {
+		Name = "Title",
+		LayoutOrder = 2,
+		Size = UDim2.new(1, 0, 0.3, 0),
+		Text = nameText,
+	})
+
+	local rarityLabel = label(gui, {
+		Name = "Rarity",
+		LayoutOrder = 3,
+		Size = UDim2.new(1, 0, 0.22, 0),
+		Text = rarity.Name,
+		TextColor3 = rarity.Color,
+	})
+	if rarity.Name == "Secret" then
+		rarityLabel.TextColor3 = Color3.new(1, 1, 1)
+		rarityLabel.TextStrokeColor3 = Color3.fromRGB(255, 0, 200)
+	end
+
+	if showIncome then
+		if item.hatched then
+			label(gui, {
+				Name = "Income",
+				LayoutOrder = 4,
+				Size = UDim2.new(1, 0, 0.26, 0),
+				Text = Util.FormatMoney(Util.ItemIncome(item)) .. "/s",
+				TextColor3 = Color3.fromRGB(120, 255, 120),
+			})
+		elseif item.hatchAt then
+			local timer = label(gui, {
+				Name = "Timer",
+				LayoutOrder = 4,
+				Size = UDim2.new(1, 0, 0.26, 0),
+				Text = "Hatching...",
+				TextColor3 = Color3.fromRGB(255, 230, 120),
+			})
+			timer:SetAttribute("HatchAt", item.hatchAt)
+			CollectionService:AddTag(timer, "HatchTimer")
+		end
+	end
+	return gui
+end
+
+-- An unhatched meteor: glowing core with a rocky shell.
+function Visuals.MeteorModel(item, showIncome)
+	local info = Config.MeteorlingById[item.id]
+	local rarity = Util.GetRarity(info.Rarity)
+	local size = rarity.Size
+
+	local model = Instance.new("Model")
+	model.Name = "Meteor"
+	local root = newRoot(model, {
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(size, size, size),
+		Material = Enum.Material.Neon,
+		Color = rarity.Color,
+	})
+
+	local rng = Random.new()
+	for i = 1, 6 do
+		local angle = CFrame.Angles(rng:NextNumber(0, math.pi * 2), rng:NextNumber(0, math.pi * 2), 0)
+		attachedPart(root, {
+			Name = "Rock" .. i,
+			Size = Vector3.new(size * 0.5, size * 0.32, size * 0.5),
+			Material = Enum.Material.Basalt,
+			Color = Color3.fromRGB(55, 48, 48),
+		}, root.CFrame * angle * CFrame.new(0, size * 0.4, 0))
+	end
+
+	make("PointLight", {
+		Color = rarity.Color,
+		Range = math.min(60, size * 4),
+		Brightness = 2.5,
+	}, root)
+
+	make("ParticleEmitter", {
+		Name = "Embers",
+		Color = ColorSequence.new(rarity.Color),
+		LightEmission = 1,
+		Rate = 6 + Config.RarityIndex[rarity.Name] * 3,
+		Lifetime = NumberRange.new(0.6, 1.2),
+		Speed = NumberRange.new(2, 5),
+		SpreadAngle = Vector2.new(180, 180),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.18), NumberSequenceKeypoint.new(1, 0) }),
+		Texture = "rbxasset://textures/particles/sparkles_main.dds",
+	}, root)
+
+	if rarity.Name == "Secret" then
+		make("Highlight", {
+			FillTransparency = 1,
+			OutlineColor = Color3.new(1, 1, 1),
+			DepthMode = Enum.HighlightDepthMode.Occluded,
+		}, model)
+	end
+
+	addMutationLook(model, root, item)
+	itemBillboard(root, item, size, showIncome)
+	return model
+end
+
+local FEATURES = {}
+
+function FEATURES.Ears(root, s, color, accent)
+	for _, side in { -1, 1 } do
+		local ear = attachedPart(root, {
+			Size = Vector3.new(0.5 * s, 1.1 * s, 0.35 * s),
+			Color = color,
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(side * 0.7 * s, 1.55 * s, 0) * CFrame.Angles(0, 0, -side * 0.35))
+		local inner = attachedPart(root, {
+			Size = Vector3.new(0.3 * s, 0.7 * s, 0.1 * s),
+			Color = accent,
+			Material = Enum.Material.Neon,
+		}, ear.CFrame * CFrame.new(0, 0, -0.2 * s))
+	end
+end
+
+function FEATURES.Horns(root, s, _color, accent)
+	for _, side in { -1, 1 } do
+		local horn = attachedPart(root, {
+			Size = Vector3.new(0.35 * s, 1.0 * s, 0.35 * s),
+			Color = accent,
+			Material = Enum.Material.Neon,
+		}, root.CFrame * CFrame.new(side * 0.65 * s, 1.45 * s, -0.2 * s) * CFrame.Angles(-0.3, 0, -side * 0.5))
+	end
+end
+
+function FEATURES.Wings(root, s, color, accent)
+	for _, side in { -1, 1 } do
+		local wing = attachedPart(root, {
+			Size = Vector3.new(1.8 * s, 0.15 * s, 1.1 * s),
+			Color = accent,
+			Material = Enum.Material.Neon,
+			Transparency = 0.2,
+		}, root.CFrame * CFrame.new(side * 1.9 * s, 0.4 * s, 0.4 * s) * CFrame.Angles(0, 0, side * 0.45))
+		local edge = attachedPart(root, {
+			Size = Vector3.new(1.4 * s, 0.18 * s, 0.4 * s),
+			Color = color,
+			Material = Enum.Material.SmoothPlastic,
+		}, wing.CFrame * CFrame.new(0, 0.05 * s, -0.45 * s))
+	end
+end
+
+function FEATURES.Antenna(root, s, _color, accent)
+	for _, side in { -1, 1 } do
+		local stalk = attachedPart(root, {
+			Size = Vector3.new(0.12 * s, 1.1 * s, 0.12 * s),
+			Color = Color3.fromRGB(40, 40, 40),
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(side * 0.45 * s, 1.75 * s, 0) * CFrame.Angles(0, 0, -side * 0.3))
+		local bulb = attachedPart(root, {
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(0.45 * s, 0.45 * s, 0.45 * s),
+			Color = accent,
+			Material = Enum.Material.Neon,
+		}, stalk.CFrame * CFrame.new(0, 0.6 * s, 0))
+	end
+end
+
+function FEATURES.Crown(root, s)
+	local gold = Color3.fromRGB(255, 205, 50)
+	local band = attachedPart(root, {
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.35 * s, 1.5 * s, 1.5 * s),
+		Color = gold,
+		Material = Enum.Material.Metal,
+	}, root.CFrame * CFrame.new(0, 1.45 * s, 0) * CFrame.Angles(0, 0, math.rad(90)))
+	for i = 0, 4 do
+		local angle = (i / 5) * math.pi * 2
+		local spike = attachedPart(root, {
+			Size = Vector3.new(0.22 * s, 0.6 * s, 0.22 * s),
+			Color = gold,
+			Material = Enum.Material.Neon,
+		}, root.CFrame * CFrame.new(math.cos(angle) * 0.6 * s, 1.85 * s, math.sin(angle) * 0.6 * s))
+	end
+end
+
+function FEATURES.Fins(root, s, color, accent)
+	local fin = attachedPart(root, {
+		Size = Vector3.new(0.2 * s, 1.1 * s, 1.2 * s),
+		Color = accent,
+		Material = Enum.Material.Neon,
+	}, root.CFrame * CFrame.new(0, 1.5 * s, 0.3 * s) * CFrame.Angles(0.5, 0, 0))
+	local tail = attachedPart(root, {
+		Size = Vector3.new(1.8 * s, 0.2 * s, 0.9 * s),
+		Color = color,
+		Material = Enum.Material.SmoothPlastic,
+	}, root.CFrame * CFrame.new(0, 0.2 * s, 1.75 * s))
+end
+
+-- A hatched Meteorling: round body, big eyes, one signature feature.
+function Visuals.CreatureModel(item, showIncome)
+	local info = Config.MeteorlingById[item.id]
+	local rarity = Util.GetRarity(info.Rarity)
+	local rarityIndex = Config.RarityIndex[info.Rarity]
+	local s = 0.85 + rarityIndex * 0.17
+	local bodySize = 3 * s
+
+	local model = Instance.new("Model")
+	model.Name = "Meteorling"
+	local root = newRoot(model, {
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(bodySize, bodySize, bodySize),
+		Material = Enum.Material.SmoothPlastic,
+		Color = info.Color,
+	})
+
+	-- Ball parts must have a uniform size
+	attachedPart(root, {
+		Name = "Belly",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(1.6 * s, 1.6 * s, 1.6 * s),
+		Color = info.Color:Lerp(Color3.new(1, 1, 1), 0.35),
+		Material = Enum.Material.SmoothPlastic,
+	}, root.CFrame * CFrame.new(0, -0.55 * s, -0.6 * s))
+
+	for _, side in { -1, 1 } do
+		local eye = attachedPart(root, {
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(0.85 * s, 0.85 * s, 0.85 * s),
+			Color = Color3.new(1, 1, 1),
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(side * 0.55 * s, 0.4 * s, -1.2 * s))
+		local pupil = attachedPart(root, {
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(0.45 * s, 0.45 * s, 0.45 * s),
+			Color = Color3.new(0.05, 0.05, 0.08),
+			Material = Enum.Material.SmoothPlastic,
+		}, eye.CFrame * CFrame.new(0, 0, -0.28 * s))
+		local shine = attachedPart(root, {
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(0.15 * s, 0.15 * s, 0.15 * s),
+			Color = Color3.new(1, 1, 1),
+			Material = Enum.Material.Neon,
+		}, pupil.CFrame * CFrame.new(0.1 * s, 0.1 * s, -0.15 * s))
+	end
+
+	local feature = FEATURES[info.Feature]
+	if feature then
+		feature(root, s, info.Color, rarity.Color)
+	end
+
+	if rarityIndex >= 5 then
+		make("PointLight", { Color = rarity.Color, Range = 14 + rarityIndex * 2, Brightness = 1.5 }, root)
+	end
+	if rarityIndex >= 6 then
+		make("ParticleEmitter", {
+			Color = ColorSequence.new(rarity.Color),
+			LightEmission = 1,
+			Rate = 8,
+			Lifetime = NumberRange.new(1, 1.6),
+			Speed = NumberRange.new(0.5, 1.5),
+			SpreadAngle = Vector2.new(180, 180),
+			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 0) }),
+			Texture = "rbxasset://textures/particles/sparkles_main.dds",
+		}, root)
+	end
+
+	addMutationLook(model, root, item)
+	itemBillboard(root, item, bodySize + 1.5 * s, showIncome)
+	return model
+end
+
+function Visuals.ItemModel(item, showIncome)
+	if item.hatched then
+		return Visuals.CreatureModel(item, showIncome)
+	end
+	return Visuals.MeteorModel(item, showIncome)
+end
+
+-- Red pulsing circle that shows where a meteor is about to land.
+function Visuals.WarningCircle(diameter, color)
+	local circle = make("Part", {
+		Name = "ImpactWarning",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.3, diameter, diameter),
+		Material = Enum.Material.Neon,
+		Color = Color3.fromRGB(255, 40, 40),
+		Transparency = 0.35,
+		Anchored = true,
+		CanCollide = false,
+		CanTouch = false,
+		CanQuery = false,
+	})
+	local inner = make("Part", {
+		Name = "Inner",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.35, diameter * 0.35, diameter * 0.35),
+		Material = Enum.Material.Neon,
+		Color = color,
+		Anchored = true,
+		CanCollide = false,
+		CanTouch = false,
+		CanQuery = false,
+	}, circle)
+	inner:SetAttribute("Follow", true)
+	return circle, inner
+end
+
+-- Tall light beam marking a special meteor (Golden Comet).
+function Visuals.Beacon(position, color)
+	return make("Part", {
+		Name = "Beacon",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(500, 3, 3),
+		CFrame = CFrame.new(position + Vector3.new(0, 250, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Material = Enum.Material.Neon,
+		Color = color,
+		Transparency = 0.45,
+		Anchored = true,
+		CanCollide = false,
+		CanTouch = false,
+		CanQuery = false,
+	})
+end
+
+function Visuals.HammerTool(big)
+	local tool = Instance.new("Tool")
+	tool.Name = "Hammer"
+	tool.ToolTip = "Bonk players to make them drop what they carry!"
+	tool.CanBeDropped = false
+	tool.RequiresHandle = true
+	tool.Grip = CFrame.new(0, -1.2, 0)
+
+	local scale = 1
+	local headColor = Color3.fromRGB(255, 120, 40)
+	if big then
+		scale = 1.5
+		headColor = Color3.fromRGB(255, 210, 40)
+	end
+
+	local handle = make("Part", {
+		Name = "Handle",
+		Size = Vector3.new(0.5, 4 * scale, 0.5),
+		Material = Enum.Material.Wood,
+		Color = Color3.fromRGB(110, 70, 40),
+		CanCollide = false,
+		Massless = true,
+	}, tool)
+
+	local head = make("Part", {
+		Name = "Head",
+		Size = Vector3.new(2.4 * scale, 1.4 * scale, 1.4 * scale),
+		Material = Enum.Material.Neon,
+		Color = headColor,
+		CanCollide = false,
+		Massless = true,
+	})
+	head.CFrame = handle.CFrame * CFrame.new(0, 2 * scale, 0)
+	head.Parent = tool
+	make("WeldConstraint", { Part0 = handle, Part1 = head }, head)
+
+	make("Sound", {
+		Name = "Swing",
+		SoundId = "rbxasset://sounds/swordslash.wav",
+		Volume = 0.6,
+	}, handle)
+	make("Sound", {
+		Name = "Hit",
+		SoundId = "rbxasset://sounds/hit.wav",
+		Volume = 0.9,
+	}, handle)
+
+	return tool
+end
+
+return Visuals
+]]></ProtectedString>
+					</Properties>
+				</Item>
+			</Item>
+			<Item class="Folder" referent="RBX0002172EDDFF4DAF9BDFC69B99164D22">
+				<Properties>
+					<string name="Name">Services</string>
+				</Properties>
+				<Item class="ModuleScript" referent="RBX33E577DD2F8E4550B423D21968F5F98D">
+					<Properties>
+						<string name="Name">CombatService</string>
+						<ProtectedString name="Source"><![CDATA[-- CombatService: the Hammer. Bonk a player to knock them back and make them drop
+-- whatever they carry. Stolen items fly back to their owner.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Remotes = require(Shared.Remotes)
+
+local Visuals = require(script.Parent.Parent.Modules.Visuals)
+
+local CombatService = {}
+local Services
+
+local lastSwing = {} -- [player] = os.clock()
+
+function CombatService.Init(services)
+	Services = services
+end
+
+function CombatService.Start()
+	Players.PlayerRemoving:Connect(function(player)
+		lastSwing[player] = nil
+	end)
+end
+
+local function findHammer(player)
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	local character = player.Character
+	local tool = (backpack and backpack:FindFirstChild("Hammer")) or (character and character:FindFirstChild("Hammer"))
+	return tool
+end
+
+function CombatService.GiveHammer(player, replace)
+	local existing = findHammer(player)
+	if existing then
+		if not replace then
+			return
+		end
+		existing:Destroy()
+	end
+	local backpack = player:FindFirstChildOfClass("Backpack") or player:WaitForChild("Backpack", 5)
+	if not backpack then
+		return
+	end
+	local big = Services.Player.HasPass(player, "BigHammer")
+	local tool = Visuals.HammerTool(big)
+	tool.Activated:Connect(function()
+		CombatService.Swing(player, tool, big)
+	end)
+	tool.Parent = backpack
+end
+
+function CombatService.Hit(attacker, victim, direction)
+	local carry = Services.Meteor.GetCarry(victim)
+	if carry then
+		if carry.StolenFrom == attacker then
+			Services.Notify(attacker, "You got your " .. carry.Item.id .. " back!", Color3.fromRGB(120, 255, 160))
+		else
+			Services.Notify(attacker, "Bonk! " .. victim.DisplayName .. " dropped it!", Color3.fromRGB(255, 220, 120))
+		end
+		Services.Meteor.Drop(victim, "bonk")
+		Services.Notify(victim, attacker.DisplayName .. " bonked you!", Color3.fromRGB(255, 120, 80))
+	end
+
+	local push = direction
+	if push.Magnitude < 0.1 then
+		push = Vector3.new(0, 0, 1)
+	end
+	push = push.Unit * Config.Bonk.Knockback + Vector3.new(0, 35, 0)
+	Remotes.Knockback:FireClient(victim, push, Config.Bonk.StunTime)
+
+	local victimRoot = Services.Player.GetAliveParts(victim)
+	if victimRoot then
+		Remotes.Effect:FireAllClients("Bonk", victimRoot.Position)
+	end
+end
+
+function CombatService.Swing(player, tool, big)
+	local cooldown = Config.Bonk.Cooldown
+	local range = Config.Bonk.Range
+	if big then
+		cooldown = Config.Bonk.BigCooldown
+		range = Config.Bonk.BigRange
+	end
+	local now = os.clock()
+	if now - (lastSwing[player] or 0) < cooldown then
+		return
+	end
+	lastSwing[player] = now
+
+	local root = Services.Player.GetAliveParts(player)
+	if not root then
+		return
+	end
+
+	-- Swing animation: tilt the grip forward for a moment
+	local handle = tool:FindFirstChild("Handle")
+	if handle then
+		local swing = handle:FindFirstChild("Swing")
+		if swing then
+			swing:Play()
+		end
+	end
+	local restGrip = tool.Grip
+	tool.Grip = restGrip * CFrame.Angles(math.rad(-80), 0, 0)
+	task.delay(0.18, function()
+		if tool.Parent then
+			tool.Grip = restGrip
+		end
+	end)
+
+	local facing = root.CFrame.LookVector
+	facing = Vector3.new(facing.X, 0, facing.Z).Unit
+	local hitSomeone = false
+	for _, other in Players:GetPlayers() do
+		if other ~= player then
+			local otherRoot = Services.Player.GetAliveParts(other)
+			if otherRoot then
+				local offset = otherRoot.Position - root.Position
+				if offset.Magnitude <= range then
+					local flat = Vector3.new(offset.X, 0, offset.Z)
+					if flat.Magnitude < 3 or flat.Unit:Dot(facing) > 0.15 then
+						CombatService.Hit(player, other, flat)
+						hitSomeone = true
+					end
+				end
+			end
+		end
+	end
+
+	if hitSomeone and handle then
+		local hit = handle:FindFirstChild("Hit")
+		if hit then
+			hit:Play()
+		end
+	end
+end
+
+return CombatService
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX07BF3DF44B6548F68D8DABB0046E310E">
+					<Properties>
+						<string name="Name">DataService</string>
+						<ProtectedString name="Source"><![CDATA[-- DataService: loads/saves player data with DataStoreService and pushes a state
+-- snapshot to each client whenever something changes.
+-- In Studio, turn on "Enable Studio Access to API Services" to test saving;
+-- without it the game still runs, it just does not save.
+
+local DataStoreService = game:GetService("DataStoreService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Util = require(Shared.Util)
+local Remotes = require(Shared.Remotes)
+
+local DataService = {}
+local Services
+
+local store = nil
+local profiles = {} -- [player] = { Data = table, CanSave = bool, Dirty = bool }
+
+local DEFAULT_DATA = {
+	Money = 0,
+	Bank = 0,
+	Speed = Config.StartSpeed,
+	Boots = 0,
+	Pedestals = Config.StartPedestals,
+	Rebirths = 0,
+	Items = {}, -- ["slot"] = { id = string, mut = string?, hatchAt = number?, hatched = bool? }
+	Index = {}, -- [meteorlingId] = true
+	LuckUntil = 0,
+	Receipts = {},
+	LastOnline = 0,
+	Stats = { Stolen = 0, Hatched = 0, Rebirths = 0 },
+}
+
+local function deepCopy(value)
+	if type(value) ~= "table" then
+		return value
+	end
+	local copy = {}
+	for k, v in value do
+		copy[k] = deepCopy(v)
+	end
+	return copy
+end
+
+local function reconcile(data, template)
+	for key, value in template do
+		if data[key] == nil then
+			data[key] = deepCopy(value)
+		elseif type(value) == "table" and type(data[key]) == "table" and next(value) ~= nil then
+			reconcile(data[key], value)
+		end
+	end
+	return data
+end
+
+local function keyFor(player)
+	return "player_" .. player.UserId
+end
+
+function DataService.Init(services)
+	Services = services
+	local ok, result = pcall(function()
+		return DataStoreService:GetDataStore(Config.DataStoreName)
+	end)
+	if ok then
+		store = result
+	else
+		warn("[DataService] DataStore unavailable, progress will not save:", result)
+	end
+end
+
+function DataService.Start()
+	-- Autosave
+	task.spawn(function()
+		while true do
+			task.wait(Config.AutosaveInterval)
+			for player in profiles do
+				task.spawn(DataService.Save, player)
+			end
+		end
+	end)
+
+	-- Push snapshots to clients
+	task.spawn(function()
+		while true do
+			task.wait(0.25)
+			for player, profile in profiles do
+				if profile.Dirty and player.Parent then
+					profile.Dirty = false
+					DataService.SendSnapshot(player)
+				end
+			end
+		end
+	end)
+end
+
+function DataService.Load(player)
+	local data = nil
+	local loaded = false
+	if store then
+		for attempt = 1, 3 do
+			local ok, result = pcall(function()
+				return store:GetAsync(keyFor(player))
+			end)
+			if ok then
+				data = result
+				loaded = true
+				break
+			end
+			warn(string.format("[DataService] Load attempt %d failed for %s: %s", attempt, player.Name, tostring(result)))
+			task.wait(1.5)
+		end
+	end
+
+	if type(data) ~= "table" then
+		data = {}
+	end
+	reconcile(data, DEFAULT_DATA)
+
+	local profile = {
+		Data = data,
+		CanSave = loaded,
+		Dirty = true,
+	}
+	profiles[player] = profile
+	return profile
+end
+
+function DataService.Get(player)
+	local profile = profiles[player]
+	if profile then
+		return profile.Data
+	end
+	return nil
+end
+
+function DataService.MarkDirty(player)
+	local profile = profiles[player]
+	if profile then
+		profile.Dirty = true
+	end
+end
+
+function DataService.Save(player)
+	local profile = profiles[player]
+	if not profile or not profile.CanSave or not store then
+		return false
+	end
+	profile.Data.LastOnline = os.time()
+	local ok, err = pcall(function()
+		store:SetAsync(keyFor(player), profile.Data, { player.UserId })
+	end)
+	if not ok then
+		warn("[DataService] Save failed for " .. player.Name .. ": " .. tostring(err))
+	end
+	return ok
+end
+
+function DataService.Remove(player)
+	profiles[player] = nil
+end
+
+function DataService.AllPlayers()
+	local list = {}
+	for player in profiles do
+		table.insert(list, player)
+	end
+	return list
+end
+
+function DataService.SetupLeaderstats(player)
+	local folder = Instance.new("Folder")
+	folder.Name = "leaderstats"
+	local cash = Instance.new("StringValue")
+	cash.Name = "Cash"
+	cash.Value = "$0"
+	cash.Parent = folder
+	local speed = Instance.new("IntValue")
+	speed.Name = "Speed"
+	speed.Parent = folder
+	local rebirths = Instance.new("IntValue")
+	rebirths.Name = "Rebirths"
+	rebirths.Parent = folder
+	folder.Parent = player
+end
+
+function DataService.SendSnapshot(player)
+	local data = DataService.Get(player)
+	if not data then
+		return
+	end
+	local PlayerService = Services.Player
+	local PlotService = Services.Plot
+
+	local bootsCost = nil
+	if data.Boots < Config.Boots.MaxLevel then
+		bootsCost = Util.BootsCost(data.Boots)
+	end
+	local pedestalCost = nil
+	if data.Pedestals < Config.MaxBuyablePedestals then
+		pedestalCost = Util.PedestalCost(data.Pedestals)
+	end
+
+	local passes = {}
+	for key in Config.GamePasses do
+		passes[key] = PlayerService.HasPass(player, key)
+	end
+
+	local snapshot = {
+		Money = data.Money,
+		Bank = data.Bank,
+		Income = PlotService.GetIncome(player),
+		Speed = math.floor(data.Speed),
+		MaxSpeed = Config.MaxSpeed,
+		PadRate = PlayerService.GetPadRate(player),
+		Boots = data.Boots,
+		BootsMax = Config.Boots.MaxLevel,
+		BootsCost = bootsCost,
+		Pedestals = data.Pedestals,
+		PedestalsTotal = PlayerService.GetPedestalCount(player),
+		PedestalCost = pedestalCost,
+		MaxBuyable = Config.MaxBuyablePedestals,
+		Used = Util.CountKeys(data.Items),
+		Rebirths = data.Rebirths,
+		RebirthCost = Util.RebirthCost(data.Rebirths),
+		Mult = PlayerService.GetIncomeMultiplier(player),
+		RebirthMult = Util.RebirthMultiplier(data.Rebirths),
+		NextRebirthMult = Util.RebirthMultiplier(data.Rebirths + 1),
+		Index = data.Index,
+		IndexCount = Util.CountKeys(data.Index),
+		Passes = passes,
+		LuckUntil = data.LuckUntil,
+		Luck = PlayerService.GetLuck(player),
+		ShowerUntil = Services.Event.GetShowerUntil(),
+	}
+	Remotes.Sync:FireClient(player, snapshot)
+
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if leaderstats then
+		leaderstats.Cash.Value = Util.FormatMoney(data.Money)
+		leaderstats.Speed.Value = math.floor(data.Speed)
+		leaderstats.Rebirths.Value = data.Rebirths
+	end
+end
+
+function DataService.SaveAll()
+	local pending = 0
+	for player in profiles do
+		pending += 1
+		task.spawn(function()
+			DataService.Save(player)
+			pending -= 1
+		end)
+	end
+	local started = os.clock()
+	while pending > 0 and os.clock() - started < 25 do
+		task.wait(0.1)
+	end
+end
+
+return DataService
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBXC7F22E1BBD0848159DD10FFC1AD4C250">
+					<Properties>
+						<string name="Name">EventService</string>
+						<ProtectedString name="Source"><![CDATA[-- EventService: server-wide moments that make the whole lobby scream.
+--   Meteor Shower: 3x meteors, meteors can already be mutated
+--   Golden Comet : one huge mutated meteor with a sky beam, everyone races for it
+
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Util = require(Shared.Util)
+local Remotes = require(Shared.Remotes)
+
+local EventService = {}
+local Services
+
+local showerUntil = 0
+local skyToken = 0
+
+local COMET_WEIGHTS = { Epic = 40, Legendary = 35, Mythic = 18, Cosmic = 6, Secret = 1 }
+
+local function tintSky(on)
+	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+	if not atmosphere then
+		return
+	end
+	local goal = { Color = Color3.fromRGB(200, 170, 255), Decay = Color3.fromRGB(110, 80, 160) }
+	if on then
+		goal = { Color = Color3.fromRGB(255, 150, 90), Decay = Color3.fromRGB(200, 60, 60) }
+	end
+	TweenService:Create(atmosphere, TweenInfo.new(3), goal):Play()
+end
+
+function EventService.Init(services)
+	Services = services
+end
+
+function EventService.IsShower()
+	return os.time() < showerUntil
+end
+
+function EventService.GetShowerUntil()
+	return showerUntil
+end
+
+function EventService.StartShower(byName)
+	local now = os.time()
+	showerUntil = math.max(now, showerUntil) + Config.Events.ShowerDuration
+	skyToken += 1
+	local token = skyToken
+	tintSky(true)
+
+	local sub = "3x meteors • mutated meteors • 2x luck"
+	if byName then
+		sub = byName .. " summoned it! " .. sub
+	end
+	Remotes.Banner:FireAllClients({
+		Title = "☄️ METEOR SHOWER! ☄️",
+		Subtitle = sub,
+		Color = Color3.fromRGB(255, 140, 60),
+		EndsAt = showerUntil,
+	})
+	for _, player in Players:GetPlayers() do
+		Services.Data.MarkDirty(player)
+	end
+
+	task.delay(showerUntil - now + 0.5, function()
+		if token == skyToken and not EventService.IsShower() then
+			tintSky(false)
+		end
+	end)
+end
+
+function EventService.SpawnComet(byName)
+	local zoneIndex = math.random(2, #Config.Zones)
+	local zone = Config.Zones[zoneIndex]
+	local rarity = Util.WeightedPick(COMET_WEIGHTS)
+	local mutation = "Golden"
+	if math.random() < 0.15 then
+		mutation = "Rainbow"
+	end
+	local warningTime = 10
+
+	Services.Meteor.SpawnMeteor(zoneIndex, {
+		Rarity = rarity,
+		Mutation = mutation,
+		Special = true,
+		Beacon = true,
+		BeaconColor = Config.MutationByName[mutation].Color,
+		WarningTime = warningTime,
+		Lifetime = 90,
+		Announce = true,
+	})
+
+	local sub = "A " .. string.upper(mutation) .. " " .. rarity .. " comet lands in " .. zone.Name .. "! Follow the light!"
+	if byName then
+		sub = byName .. " summoned it! " .. sub
+	end
+	Remotes.Banner:FireAllClients({
+		Title = "🌟 " .. string.upper(mutation) .. " COMET INCOMING! 🌟",
+		Subtitle = sub,
+		Color = Config.MutationByName[mutation].Color,
+		EndsAt = os.time() + warningTime,
+	})
+end
+
+function EventService.Start()
+	task.spawn(function()
+		while true do
+			task.wait(math.random(Config.Events.MinGap, Config.Events.MaxGap))
+			if #Players:GetPlayers() > 0 then
+				if math.random() < Config.Events.CometChance then
+					EventService.SpawnComet(nil)
+				else
+					EventService.StartShower(nil)
+				end
+			end
+		end
+	end)
+end
+
+return EventService
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBXEFDBEC96BA554D3C990B0F0428F8EF55">
+					<Properties>
+						<string name="Name">MeteorService</string>
+						<ProtectedString name="Source"><![CDATA[-- MeteorService: meteors falling from the sky, grabbing, carrying them over your head,
+-- dropping them, delivering them home, speed gates and zone hazards.
+
+local CollectionService = game:GetService("CollectionService")
+local Debris = game:GetService("Debris")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Util = require(Shared.Util)
+local Remotes = require(Shared.Remotes)
+
+local Visuals = require(script.Parent.Parent.Modules.Visuals)
+
+local MeteorService = {}
+local Services
+
+local meteorFolder
+local carriedFolder
+local active = {} -- [zoneIndex] = meteors currently waiting in that zone
+local ground = {} -- [model] = entry
+local carries = {} -- [player] = carry
+local hazardCooldown = {} -- [player] = os.clock() time
+local messageCooldown = {} -- [player] = { [key] = os.clock() time }
+
+local function notifyThrottled(player, key, text, color, gap)
+	messageCooldown[player] = messageCooldown[player] or {}
+	local now = os.clock()
+	local last = messageCooldown[player][key] or 0
+	if now - last >= (gap or 3) then
+		messageCooldown[player][key] = now
+		Services.Notify(player, text, color)
+	end
+end
+
+local function groundHeightAt(position)
+	local ignore = { meteorFolder, carriedFolder }
+	for _, player in Players:GetPlayers() do
+		if player.Character then
+			table.insert(ignore, player.Character)
+		end
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = ignore
+	params.RespectCanCollide = true
+	local result = workspace:Raycast(position + Vector3.new(0, 5, 0), Vector3.new(0, -300, 0), params)
+	if result then
+		return result.Position.Y
+	end
+	return 0
+end
+
+local function rarityOf(item)
+	return Util.GetRarity(Config.MeteorlingById[item.id].Rarity)
+end
+
+function MeteorService.Init(services)
+	Services = services
+	meteorFolder = Services.Map.MeteorFolder
+	carriedFolder = Instance.new("Folder")
+	carriedFolder.Name = "Carried"
+	carriedFolder.Parent = workspace
+	for i in Config.Zones do
+		active[i] = 0
+	end
+end
+
+function MeteorService.GetCarry(player)
+	return carries[player]
+end
+
+-- Ground meteors -------------------------------------------------------------
+
+local function removeGround(entry)
+	ground[entry.Model] = nil
+	if entry.Zone then
+		active[entry.Zone] = math.max(0, active[entry.Zone] - 1)
+	end
+	if entry.Beacon then
+		entry.Beacon:Destroy()
+		entry.Beacon = nil
+	end
+end
+
+function MeteorService.MakeGround(model, item, opts)
+	local root = model.PrimaryPart
+	local rarity = rarityOf(item)
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "GrabPrompt"
+	prompt.ActionText = "Grab"
+	local objectText = rarity.Name .. " Meteor"
+	if item.mut then
+		objectText = item.mut .. " " .. objectText
+	end
+	prompt.ObjectText = objectText
+	prompt.HoldDuration = rarity.GrabTime
+	prompt.MaxActivationDistance = 7 + rarity.Size / 2
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = root
+
+	local entry = {
+		Model = model,
+		Item = item,
+		Zone = opts.Zone,
+		ExpireAt = os.clock() + (opts.Lifetime or Config.Meteor.GroundLifetime),
+		Beacon = opts.Beacon,
+		Announce = opts.Announce,
+	}
+	ground[model] = entry
+
+	prompt.Triggered:Connect(function(player)
+		MeteorService.TryGrab(player, model)
+	end)
+	return entry
+end
+
+function MeteorService.TryGrab(player, model)
+	local entry = ground[model]
+	if not entry then
+		return
+	end
+	if carries[player] then
+		notifyThrottled(player, "full", "Your hands are full! Bring it home first.", Color3.fromRGB(255, 180, 80))
+		return
+	end
+	if not Services.Plot.GetPlot(player) then
+		return
+	end
+	local root = Services.Player.GetAliveParts(player)
+	if not root or not model.PrimaryPart then
+		return
+	end
+	if (root.Position - model.PrimaryPart.Position).Magnitude > 25 then
+		return
+	end
+
+	removeGround(entry)
+	if entry.Announce then
+		Services.NotifyAll(
+			player.DisplayName .. " grabbed the " .. (entry.Item.mut or "Golden") .. " Comet! Bonk them!",
+			Color3.fromRGB(255, 215, 60)
+		)
+	end
+	if not MeteorService.Carry(player, entry.Item, nil, model) then
+		MeteorService.MakeGround(model, entry.Item, { Lifetime = Config.Meteor.DropLifetime })
+	end
+end
+
+function MeteorService.Impact(position, rarity)
+	local explosion = Instance.new("Explosion")
+	explosion.Position = position
+	explosion.BlastRadius = rarity.Size * 2
+	explosion.BlastPressure = 0
+	explosion.DestroyJointRadiusPercent = 0
+	explosion.ExplosionType = Enum.ExplosionType.NoCraters
+	explosion.Parent = workspace
+
+	local d = rarity.Size * 3.2
+	local scorch = Visuals.Make("Part", {
+		Name = "Scorch",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.15, d, d),
+		CFrame = CFrame.new(position + Vector3.new(0, 0.12, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Material = Enum.Material.Slate,
+		Color = Color3.fromRGB(25, 20, 20),
+		Transparency = 0.2,
+		Anchored = true,
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+	}, meteorFolder)
+	TweenService:Create(scorch, TweenInfo.new(8), { Transparency = 1 }):Play()
+	Debris:AddItem(scorch, 8.5)
+
+	Remotes.Effect:FireAllClients("Impact", position, rarity.Size)
+end
+
+-- Spawns one meteor in a zone. opts: Rarity, Mutation, Special, Beacon, WarningTime, Lifetime, Announce
+function MeteorService.SpawnMeteor(zoneIndex, opts)
+	opts = opts or {}
+	local zone = Config.Zones[zoneIndex]
+	local rarityName = opts.Rarity or Util.WeightedPick(zone.Weights)
+	local list = Config.MeteorlingsByRarity[rarityName]
+	local info = list[math.random(1, #list)]
+	local rarity = Util.GetRarity(rarityName)
+
+	local item = { id = info.Id, mut = opts.Mutation }
+	if not item.mut and Services.Event.IsShower() then
+		item.mut = Services.Plot.RollMutation(Config.Events.ShowerMutationMult * 2)
+	end
+
+	local w = Config.MapHalfWidth
+	-- Zone floors are flat at y = 0
+	local target = Vector3.new(math.random(-w + 15, w - 15), 0, math.random(zone.ZMin + 8, zone.ZMax - 8))
+
+	local countedZone = nil
+	if not opts.Special then
+		countedZone = zoneIndex
+		active[zoneIndex] += 1
+	end
+
+	local warning, inner = Visuals.WarningCircle(rarity.Size * 2 + 6, rarity.Color)
+	warning.CFrame = CFrame.new(target + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	inner.CFrame = warning.CFrame
+	warning.Parent = meteorFolder
+	local pulse = TweenService:Create(
+		warning,
+		TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Transparency = 0.85 }
+	)
+	pulse:Play()
+
+	local beacon = nil
+	if opts.Beacon then
+		beacon = Visuals.Beacon(target, opts.BeaconColor or Color3.fromRGB(255, 210, 60))
+		beacon.Parent = meteorFolder
+	end
+
+	task.delay(opts.WarningTime or Config.Meteor.WarningTime, function()
+		local model = Visuals.MeteorModel(item, false)
+		local root = model.PrimaryPart
+		local startPos = target + Vector3.new(math.random(-90, 90), 280, math.random(-90, 90))
+		model:PivotTo(CFrame.lookAt(startPos, target))
+
+		local a0 = Instance.new("Attachment")
+		a0.Position = Vector3.new(rarity.Size * 0.45, 0, 0)
+		a0.Parent = root
+		local a1 = Instance.new("Attachment")
+		a1.Position = Vector3.new(-rarity.Size * 0.45, 0, 0)
+		a1.Parent = root
+		local trail = Visuals.Make("Trail", {
+			Attachment0 = a0,
+			Attachment1 = a1,
+			Lifetime = 0.6,
+			LightEmission = 1,
+			FaceCamera = true,
+			Color = ColorSequence.new(rarity.Color, Color3.fromRGB(255, 120, 30)),
+			Transparency = NumberSequence.new(0, 1),
+		}, root)
+		local fire = Visuals.Make("Fire", {
+			Size = math.min(30, rarity.Size * 2),
+			Heat = 20,
+			Color = Color3.fromRGB(255, 140, 40),
+			SecondaryColor = rarity.Color,
+		}, root)
+
+		model.Parent = meteorFolder
+		local fall = TweenService:Create(
+			root,
+			TweenInfo.new(Config.Meteor.FallTime, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+			{ CFrame = CFrame.new(target + Vector3.new(0, rarity.Size * 0.35, 0)) }
+		)
+		fall:Play()
+		fall.Completed:Wait()
+
+		pulse:Cancel()
+		warning:Destroy()
+		fire.Enabled = false
+		trail.Enabled = false
+		Debris:AddItem(fire, 2)
+
+		MeteorService.Impact(target, rarity)
+		MeteorService.MakeGround(model, item, {
+			Zone = countedZone,
+			Lifetime = opts.Lifetime,
+			Beacon = beacon,
+			Announce = opts.Announce,
+		})
+	end)
+end
+
+-- Carrying -------------------------------------------------------------------
+
+-- stolen = { StolenFrom = player, Pedestal = number, Plot = plot } or nil
+function MeteorService.Carry(player, item, stolen, existingModel)
+	if carries[player] then
+		return false
+	end
+	local root = Services.Player.GetAliveParts(player)
+	if not root then
+		return false
+	end
+
+	local model = existingModel or Visuals.ItemModel(item, false)
+	local primary = model.PrimaryPart
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("ProximityPrompt") then
+			descendant:Destroy()
+		elseif descendant:IsA("BasePart") then
+			descendant.Anchored = false
+			descendant.CanCollide = false
+			descendant.CanTouch = false
+			descendant.CanQuery = false
+			descendant.Massless = true
+		end
+	end
+	CollectionService:RemoveTag(primary, "Bob")
+
+	local offset = CFrame.new(0, 2.8 + primary.Size.Y / 2, 0)
+	model:PivotTo(root.CFrame * offset)
+	local weld = Instance.new("Weld")
+	weld.Name = "CarryWeld"
+	weld.Part0 = root
+	weld.Part1 = primary
+	weld.C0 = offset
+	weld.Parent = primary
+	model.Parent = carriedFolder
+
+	local carry = {
+		Item = item,
+		Model = model,
+		Weld = weld,
+	}
+	if stolen then
+		carry.StolenFrom = stolen.StolenFrom
+		carry.Pedestal = stolen.Pedestal
+		carry.Plot = stolen.Plot
+	end
+	carries[player] = carry
+
+	player:SetAttribute("Carrying", item.id)
+	player:SetAttribute("CarryStolen", stolen ~= nil)
+	Services.Player.ApplyWalkSpeed(player)
+	Remotes.Effect:FireClient(player, "Grab")
+	return true
+end
+
+local function clearCarry(player)
+	carries[player] = nil
+	player:SetAttribute("Carrying", nil)
+	player:SetAttribute("CarryStolen", nil)
+end
+
+function MeteorService.Drop(player, _reason)
+	local carry = carries[player]
+	if not carry then
+		return
+	end
+	clearCarry(player)
+	if carry.Weld then
+		carry.Weld:Destroy()
+	end
+
+	local model = carry.Model
+	if carry.StolenFrom then
+		if model then
+			model:Destroy()
+		end
+		Services.Plot.ReturnStolen(carry)
+	elseif model and model.PrimaryPart then
+		local primary = model.PrimaryPart
+		local position = primary.Position
+		local y = groundHeightAt(position)
+		local rarity = rarityOf(carry.Item)
+		primary.Anchored = true
+		primary.CanQuery = true
+		model:PivotTo(CFrame.new(position.X, y + rarity.Size * 0.35, position.Z))
+		model.Parent = meteorFolder
+		MeteorService.MakeGround(model, carry.Item, { Lifetime = Config.Meteor.DropLifetime })
+	end
+
+	if player.Parent then
+		Services.Player.ApplyWalkSpeed(player)
+	end
+end
+
+function MeteorService.OnPlayerRemoving(player)
+	MeteorService.Drop(player, "left")
+	-- Anyone running away with this player's items loses them (the owner keeps them)
+	for thief, carry in carries do
+		if carry.StolenFrom == player then
+			clearCarry(thief)
+			if carry.Model then
+				carry.Model:Destroy()
+			end
+			Services.Player.ApplyWalkSpeed(thief)
+			Services.Notify(thief, "The owner left, the item vanished!", Color3.fromRGB(255, 180, 80))
+		end
+	end
+	hazardCooldown[player] = nil
+	messageCooldown[player] = nil
+end
+
+-- Hazards & gates ------------------------------------------------------------
+
+function MeteorService.Hazard(player, source, kind)
+	local now = os.clock()
+	if (hazardCooldown[player] or 0) > now then
+		return
+	end
+	hazardCooldown[player] = now + 1.5
+	local root, humanoid = Services.Player.GetAliveParts(player)
+	if not root then
+		return
+	end
+	if carries[player] then
+		MeteorService.Drop(player, kind)
+		Services.Notify(player, "Ouch! You dropped it!", Color3.fromRGB(255, 120, 80))
+	end
+	if kind == "lava" then
+		humanoid:TakeDamage(35)
+	end
+	local away = root.Position - source
+	away = Vector3.new(away.X, 0, away.Z)
+	if away.Magnitude < 0.1 then
+		away = Vector3.new(0, 0, -1)
+	end
+	Remotes.Knockback:FireClient(player, away.Unit * 70 + Vector3.new(0, 45, 0), 0.8)
+end
+
+local function checkPlayer(player)
+	local root = Services.Player.GetAliveParts(player)
+	local data = Services.Data.Get(player)
+	if not root or not data then
+		return
+	end
+	local position = root.Position
+
+	-- Speed gates: push back players that are too slow for a zone
+	for zoneIndex = 2, #Config.Zones do
+		local zone = Config.Zones[zoneIndex]
+		local gateZ = zone.ZMin - 10
+		if position.Z > gateZ and data.Speed < zone.Speed then
+			root.CFrame = CFrame.new(position.X, position.Y + 0.5, gateZ - 6) * root.CFrame.Rotation
+			notifyThrottled(
+				player,
+				"gate",
+				"You need " .. zone.Speed .. " Speed for " .. zone.Name .. ". Stand on your Speed Pad!",
+				Color3.fromRGB(120, 210, 255)
+			)
+			return
+		end
+	end
+
+	-- Lava pools
+	for _, pool in Services.Map.LavaPools do
+		local dx = position.X - pool.Position.X
+		local dz = position.Z - pool.Position.Z
+		if dx * dx + dz * dz < pool.Radius * pool.Radius and position.Y < 6 then
+			MeteorService.Hazard(player, pool.Position, "lava")
+			return
+		end
+	end
+
+	-- Spinning sweepers in the void
+	for _, sweeper in Services.Map.Sweepers do
+		local cf = sweeper.Part.CFrame
+		local rel = position - cf.Position
+		if math.abs(rel.Y) < 4.5 then
+			local along = rel:Dot(cf.RightVector)
+			if math.abs(along) <= sweeper.Part.Size.X / 2 then
+				local perp = rel - cf.RightVector * along
+				if Vector3.new(perp.X, 0, perp.Z).Magnitude < 2.8 then
+					MeteorService.Hazard(player, cf.Position, "sweeper")
+					return
+				end
+			end
+		end
+	end
+end
+
+local function checkDeposits()
+	for player, carry in carries do
+		local root = Services.Player.GetAliveParts(player)
+		local plot = Services.Plot.GetPlot(player)
+		if root and plot and Services.Plot.InsidePlot(plot, root.Position, -1) then
+			if Services.Plot.Deposit(player, carry) then
+				clearCarry(player)
+				if carry.Model then
+					carry.Model:Destroy()
+				end
+				Services.Player.ApplyWalkSpeed(player)
+			else
+				notifyThrottled(
+					player,
+					"noslot",
+					"No free pedestal! Sell a Meteorling or buy pedestals in the Shop.",
+					Color3.fromRGB(255, 120, 120)
+				)
+			end
+		end
+	end
+end
+
+function MeteorService.Start()
+	-- Natural meteor spawning, one loop per zone
+	for zoneIndex, zone in Config.Zones do
+		task.spawn(function()
+			task.wait(zoneIndex)
+			while true do
+				local mult = 1
+				if Services.Event.IsShower() then
+					mult = Config.Events.ShowerSpawnMult
+				end
+				task.wait(zone.Interval / mult)
+				local maxActive = zone.MaxActive
+				if mult > 1 then
+					maxActive = math.floor(maxActive * 1.5)
+				end
+				if #Players:GetPlayers() > 0 and active[zoneIndex] < maxActive then
+					MeteorService.SpawnMeteor(zoneIndex)
+				end
+			end
+		end)
+	end
+
+	-- Expire meteors nobody grabbed
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			local now = os.clock()
+			for model, entry in ground do
+				if now >= entry.ExpireAt then
+					removeGround(entry)
+					model:Destroy()
+				end
+			end
+		end
+	end)
+
+	-- Sweepers spin every frame; player checks run 10x per second
+	local accumulator = 0
+	RunService.Heartbeat:Connect(function(dt)
+		for _, sweeper in Services.Map.Sweepers do
+			sweeper.Angle += dt * sweeper.Speed
+			sweeper.Part.CFrame = CFrame.new(sweeper.Center) * CFrame.Angles(0, sweeper.Angle, 0)
+		end
+
+		accumulator += dt
+		if accumulator < 0.1 then
+			return
+		end
+		accumulator = 0
+		checkDeposits()
+		for _, player in Players:GetPlayers() do
+			checkPlayer(player)
+		end
+	end)
+end
+
+return MeteorService
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBXC6DD6341A9ED49ACAB9BD0FEA65EDA6B">
+					<Properties>
+						<string name="Name">PlayerService</string>
+						<ProtectedString name="Source"><![CDATA[-- PlayerService: characters, walk speed, game pass ownership and all player multipliers.
+
+local MarketplaceService = game:GetService("MarketplaceService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Util = require(Shared.Util)
+
+local PlayerService = {}
+local Services
+
+local ownedPasses = {} -- [player] = { [passKey] = true }
+
+function PlayerService.Init(services)
+	Services = services
+end
+
+function PlayerService.Start()
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
+		if not purchased then
+			return
+		end
+		for key, pass in Config.GamePasses do
+			if pass.Id ~= 0 and pass.Id == passId then
+				ownedPasses[player] = ownedPasses[player] or {}
+				ownedPasses[player][key] = true
+				PlayerService.OnPassGranted(player, key)
+			end
+		end
+	end)
+end
+
+function PlayerService.LoadPasses(player)
+	local owned = {}
+	for key, pass in Config.GamePasses do
+		if pass.Id ~= 0 then
+			local ok, result = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.Id)
+			end)
+			if ok and result then
+				owned[key] = true
+			end
+		end
+	end
+	ownedPasses[player] = owned
+end
+
+function PlayerService.HasPass(player, key)
+	local owned = ownedPasses[player]
+	return owned ~= nil and owned[key] == true
+end
+
+function PlayerService.OnPassGranted(player, key)
+	Services.Notify(player, "Thanks for buying " .. Config.GamePasses[key].Name .. "!", Color3.fromRGB(255, 220, 90))
+	if key == "VIP" then
+		Services.Plot.RefreshPedestals(player)
+		PlayerService.ApplyTag(player)
+	elseif key == "BigHammer" then
+		Services.Combat.GiveHammer(player, true)
+	end
+	PlayerService.ApplyWalkSpeed(player)
+	Services.Data.MarkDirty(player)
+end
+
+function PlayerService.Cleanup(player)
+	ownedPasses[player] = nil
+end
+
+-- Multipliers -------------------------------------------------------------
+
+function PlayerService.GetIncomeMultiplier(player)
+	local data = Services.Data.Get(player)
+	if not data then
+		return 1
+	end
+	local mult = Util.RebirthMultiplier(data.Rebirths)
+	mult *= 1 + Config.IndexBonusPerEntry * Util.CountKeys(data.Index)
+	if PlayerService.HasPass(player, "DoubleMoney") then
+		mult *= 2
+	end
+	return mult
+end
+
+function PlayerService.GetLuck(player)
+	local data = Services.Data.Get(player)
+	local luck = 1
+	if PlayerService.HasPass(player, "VIP") then
+		luck *= Config.VipLuck
+	end
+	if data and data.LuckUntil > os.time() then
+		luck *= 2
+	end
+	if Services.Event.IsShower() then
+		luck *= Config.Events.ShowerMutationMult
+	end
+	return luck
+end
+
+function PlayerService.GetPadRate(player)
+	local data = Services.Data.Get(player)
+	if not data then
+		return Config.PadBaseRate
+	end
+	local rate = Config.PadBaseRate + data.Boots
+	if PlayerService.HasPass(player, "DoubleSpeed") then
+		rate *= 2
+	end
+	return rate
+end
+
+function PlayerService.GetPedestalCount(player)
+	local data = Services.Data.Get(player)
+	if not data then
+		return Config.StartPedestals
+	end
+	local count = data.Pedestals
+	if PlayerService.HasPass(player, "VIP") then
+		count += Config.VipBonusPedestals
+	end
+	return math.min(count, Config.PhysicalPedestals)
+end
+
+-- Characters ---------------------------------------------------------------
+
+function PlayerService.GetAliveParts(player)
+	local character = player.Character
+	if not character then
+		return nil, nil
+	end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not humanoid or not root or humanoid.Health <= 0 then
+		return nil, nil
+	end
+	return root, humanoid
+end
+
+function PlayerService.ApplyWalkSpeed(player)
+	local data = Services.Data.Get(player)
+	local character = player.Character
+	if not data or not character then
+		return
+	end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+	local speed = math.min(Config.MaxSpeed, math.floor(data.Speed))
+	local carry = Services.Meteor.GetCarry(player)
+	if carry then
+		local rarity = Util.GetRarity(Config.MeteorlingById[carry.Item.id].Rarity)
+		local penalty = rarity.Weight
+		if carry.StolenFrom then
+			penalty += Config.Meteor.StolenPenalty
+		end
+		speed = math.max(12, speed * (1 - penalty))
+	end
+	humanoid.WalkSpeed = speed
+	-- Fast players need a stronger jump to feel right
+	humanoid.UseJumpPower = true
+	humanoid.JumpPower = 50 + math.min(30, speed / 10)
+end
+
+function PlayerService.ApplyTag(player)
+	local character = player.Character
+	local head = character and character:FindFirstChild("Head")
+	if not head then
+		return
+	end
+	local old = head:FindFirstChild("VipTag")
+	if old then
+		old:Destroy()
+	end
+	if not PlayerService.HasPass(player, "VIP") then
+		return
+	end
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "VipTag"
+	gui.Size = UDim2.new(4, 0, 1, 0)
+	gui.StudsOffset = Vector3.new(0, 2.6, 0)
+	gui.LightInfluence = 0
+	gui.MaxDistance = 80
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.Text = "⭐ VIP"
+	label.TextColor3 = Color3.fromRGB(255, 215, 60)
+	label.TextStrokeTransparency = 0
+	label.Parent = gui
+	gui.Parent = head
+end
+
+function PlayerService.OnCharacter(player, character)
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	local root = character:WaitForChild("HumanoidRootPart", 10)
+	if not humanoid or not root then
+		return
+	end
+
+	-- Move the player to their own base
+	local plot = Services.Plot.GetPlot(player)
+	if plot then
+		-- Small delay so the default spawn positioning does not override the teleport
+		task.delay(0.1, function()
+			if root.Parent then
+				character:PivotTo(plot.SpawnCFrame)
+			end
+		end)
+	end
+
+	PlayerService.ApplyWalkSpeed(player)
+	PlayerService.ApplyTag(player)
+	Services.Combat.GiveHammer(player, false)
+
+	humanoid.Died:Connect(function()
+		Services.Meteor.Drop(player, "died")
+	end)
+end
+
+function PlayerService.Setup(player)
+	Services.Data.SetupLeaderstats(player)
+	PlayerService.LoadPasses(player)
+
+	player.CharacterAdded:Connect(function(character)
+		PlayerService.OnCharacter(player, character)
+	end)
+	if player.Character then
+		task.spawn(PlayerService.OnCharacter, player, player.Character)
+	end
+end
+
+return PlayerService
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX20BF7F4CD65A47FEBC3900BB12B232D8">
+					<Properties>
+						<string name="Name">PlotService</string>
+						<ProtectedString name="Source"><![CDATA[-- PlotService: player bases. Pedestals, hatching, income, the Speed/Collect/Lock pads
+-- and stealing from other bases.
+
+local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Util = require(Shared.Util)
+local Remotes = require(Shared.Remotes)
+
+local Visuals = require(script.Parent.Parent.Modules.Visuals)
+
+local PlotService = {}
+local Services
+
+local plots = {}
+local plotOf = {} -- [player] = plot
+local padTimers = {} -- [player] = accumulated whole-speed popups
+
+local function slotKey(i)
+	return tostring(i)
+end
+
+local function insidePlot(plot, position, margin)
+	margin = margin or 0
+	local rel = position - plot.Center
+	return math.abs(rel.X) <= plot.HalfX + margin and math.abs(rel.Z) <= plot.HalfZ + margin and rel.Y < 30
+end
+PlotService.InsidePlot = insidePlot
+
+local function onPad(pad, position)
+	local rel = position - pad.Position
+	return math.abs(rel.X) <= pad.Size.X / 2 + 0.5 and math.abs(rel.Z) <= pad.Size.Z / 2 + 0.5 and rel.Y < 8
+end
+
+local function setText(label, text)
+	if label.Text ~= text then
+		label.Text = text
+	end
+end
+
+function PlotService.Init(services)
+	Services = services
+	plots = Services.Map.Plots
+end
+
+function PlotService.GetPlot(player)
+	return plotOf[player]
+end
+
+function PlotService.IsLocked(plot)
+	return os.time() < plot.LockedUntil
+end
+
+-- Ownership ------------------------------------------------------------------
+
+function PlotService.Assign(player)
+	for _, plot in plots do
+		if plot.Owner == nil then
+			plot.Owner = player
+			plotOf[player] = plot
+			plot.Model:SetAttribute("Owner", player.UserId)
+			plot.SignLabel.Text = player.DisplayName .. "'s Base"
+			plot.LockedUntil = 0
+			plot.LockCooldownUntil = 0
+			PlotService.RefreshPedestals(player)
+			if player.Character then
+				player.Character:PivotTo(plot.SpawnCFrame)
+			end
+			return plot
+		end
+	end
+	warn("[PlotService] No free plot for " .. player.Name .. ". Set Max Players to " .. Config.PlotCount)
+	Services.Notify(player, "All bases are taken! Try another server.", Color3.fromRGB(255, 90, 90))
+	return nil
+end
+
+function PlotService.Release(player)
+	local plot = plotOf[player]
+	if not plot then
+		return
+	end
+	plotOf[player] = nil
+	for i = 1, Config.PhysicalPedestals do
+		if plot.Rendered[i] then
+			plot.Rendered[i]:Destroy()
+			plot.Rendered[i] = nil
+		end
+		plot.Reserved[i] = nil
+		local pedestal = plot.Pedestals[i]
+		pedestal.LockGui.Enabled = false
+		pedestal.Part.Color = Color3.fromRGB(230, 230, 240)
+	end
+	plot.Owner = nil
+	plot.Model:SetAttribute("Owner", 0)
+	plot.SignLabel.Text = "Empty Base"
+	plot.BankLabel.Text = "💰 $0\nstep to collect"
+	plot.LockedUntil = 0
+	plot.Laser.Transparency = 1
+	padTimers[player] = nil
+end
+
+-- Pedestals ------------------------------------------------------------------
+
+function PlotService.RenderPedestal(plot, i)
+	local old = plot.Rendered[i]
+	if old then
+		old:Destroy()
+		plot.Rendered[i] = nil
+	end
+	local owner = plot.Owner
+	if not owner then
+		return
+	end
+	local data = Services.Data.Get(owner)
+	if not data then
+		return
+	end
+	local item = data.Items[slotKey(i)]
+	if not item then
+		return
+	end
+
+	local pedestal = plot.Pedestals[i].Part
+	local top = pedestal.Position.Y + pedestal.Size.X / 2
+
+	if plot.Reserved[i] then
+		-- Someone is running away with this one
+		local marker = Instance.new("Model")
+		marker.Name = "StolenMarker"
+		local anchor = Visuals.Make("Part", {
+			Name = "Root",
+			Size = Vector3.new(1, 1, 1),
+			Position = Vector3.new(pedestal.Position.X, top + 2, pedestal.Position.Z),
+			Anchored = true,
+			CanCollide = false,
+			CanQuery = false,
+			CanTouch = false,
+			Transparency = 1,
+		}, marker)
+		local gui = Visuals.Make("BillboardGui", {
+			Size = UDim2.new(7, 0, 2, 0),
+			LightInfluence = 0,
+			MaxDistance = 150,
+		}, anchor)
+		Visuals.Label(gui, {
+			Size = UDim2.fromScale(1, 1),
+			Text = "🚨 STOLEN! 🚨",
+			TextColor3 = Color3.fromRGB(255, 70, 70),
+		})
+		marker.Parent = plot.ItemsFolder
+		plot.Rendered[i] = marker
+		return
+	end
+
+	local model = Visuals.ItemModel(item, true)
+	local root = model.PrimaryPart
+	local position = Vector3.new(pedestal.Position.X, top + root.Size.Y / 2 + 0.3, pedestal.Position.Z)
+	local cf = CFrame.lookAt(position, position + Vector3.new(0, 0, 1))
+	model:PivotTo(cf) -- moves every part, even before the model is in the workspace
+	root:SetAttribute("BaseCF", cf)
+	if item.hatched then
+		CollectionService:AddTag(root, "Bob")
+	end
+
+	local info = Config.MeteorlingById[item.id]
+	local rarityIndex = Config.RarityIndex[info.Rarity]
+
+	local sellPrice = PlotService.SellPrice(item)
+	local sellPrompt = Instance.new("ProximityPrompt")
+	sellPrompt.Name = "SellPrompt"
+	sellPrompt.ActionText = "Sell " .. Util.FormatMoney(sellPrice)
+	sellPrompt.ObjectText = item.id
+	sellPrompt.HoldDuration = 1
+	sellPrompt.MaxActivationDistance = 9
+	sellPrompt.RequiresLineOfSight = false
+	sellPrompt:SetAttribute("Kind", "Sell")
+	sellPrompt.Parent = root
+
+	local stealPrompt = Instance.new("ProximityPrompt")
+	stealPrompt.Name = "StealPrompt"
+	stealPrompt.ActionText = "Steal"
+	stealPrompt.ObjectText = info.Rarity .. " " .. item.id
+	stealPrompt.HoldDuration = 0.6 + rarityIndex * 0.2
+	stealPrompt.MaxActivationDistance = 9
+	stealPrompt.RequiresLineOfSight = false
+	stealPrompt:SetAttribute("Kind", "Steal")
+	stealPrompt.Parent = root
+
+	sellPrompt.Triggered:Connect(function(player)
+		if plot.Rendered[i] == model then
+			PlotService.Sell(player, plot, i)
+		end
+	end)
+	stealPrompt.Triggered:Connect(function(player)
+		if plot.Rendered[i] == model then
+			PlotService.StartSteal(player, plot, i)
+		end
+	end)
+
+	model.Parent = plot.ItemsFolder
+	plot.Rendered[i] = model
+end
+
+function PlotService.RefreshPedestals(player)
+	local plot = plotOf[player]
+	if not plot then
+		return
+	end
+	local unlocked = Services.Player.GetPedestalCount(player)
+	for i = 1, Config.PhysicalPedestals do
+		local pedestal = plot.Pedestals[i]
+		local isUnlocked = i <= unlocked
+		pedestal.LockGui.Enabled = not isUnlocked
+		if isUnlocked then
+			pedestal.Part.Color = Color3.fromRGB(230, 230, 240)
+			pedestal.Ring.Transparency = 0
+		else
+			pedestal.Part.Color = Color3.fromRGB(90, 90, 100)
+			pedestal.Ring.Transparency = 0.8
+		end
+		PlotService.RenderPedestal(plot, i)
+	end
+end
+
+function PlotService.SellPrice(item)
+	local price = Util.ItemIncome(item) * Config.SellHatchedSeconds
+	if not item.hatched then
+		price *= Config.SellMeteorMult
+	end
+	return math.floor(price)
+end
+
+function PlotService.Sell(player, plot, i)
+	if plot.Owner ~= player or plot.Reserved[i] then
+		return
+	end
+	local data = Services.Data.Get(player)
+	local item = data and data.Items[slotKey(i)]
+	if not item then
+		return
+	end
+	local price = PlotService.SellPrice(item)
+	data.Items[slotKey(i)] = nil
+	data.Money += price
+	PlotService.RenderPedestal(plot, i)
+	Services.Notify(player, "Sold " .. item.id .. " for " .. Util.FormatMoney(price), Color3.fromRGB(120, 255, 120))
+	Remotes.Effect:FireClient(player, "Collect", price)
+	Services.Data.MarkDirty(player)
+end
+
+function PlotService.FreeSlot(player)
+	local plot = plotOf[player]
+	local data = Services.Data.Get(player)
+	if not plot or not data then
+		return nil
+	end
+	for i = 1, Services.Player.GetPedestalCount(player) do
+		if data.Items[slotKey(i)] == nil and not plot.Reserved[i] then
+			return i
+		end
+	end
+	return nil
+end
+
+local function discover(player, data, item)
+	if data.Index[item.id] then
+		return
+	end
+	data.Index[item.id] = true
+	local info = Config.MeteorlingById[item.id]
+	Remotes.Effect:FireClient(player, "Discovered", item.id, info.Rarity)
+	Services.Notify(
+		player,
+		"NEW Index entry: " .. item.id .. "! (+" .. math.floor(Config.IndexBonusPerEntry * 100) .. "% income)",
+		Util.GetRarity(info.Rarity).Color
+	)
+end
+
+-- Called by MeteorService when a carrying player walks into their own base.
+function PlotService.Deposit(player, carry)
+	local plot = plotOf[player]
+	local data = Services.Data.Get(player)
+	if not plot or not data then
+		return false
+	end
+	local slot = PlotService.FreeSlot(player)
+	if not slot then
+		return false
+	end
+
+	local item = carry.Item
+	if carry.StolenFrom then
+		local owner = carry.StolenFrom
+		local ownerPlot = carry.Plot
+		local ownerData = Services.Data.Get(owner)
+		if not ownerData or ownerPlot.Owner ~= owner then
+			return false
+		end
+		ownerData.Items[slotKey(carry.Pedestal)] = nil
+		ownerPlot.Reserved[carry.Pedestal] = nil
+		PlotService.RenderPedestal(ownerPlot, carry.Pedestal)
+		Services.Data.MarkDirty(owner)
+		data.Stats.Stolen += 1
+		Services.Notify(owner, player.DisplayName .. " stole your " .. item.id .. "!", Color3.fromRGB(255, 80, 80))
+		Services.Notify(player, "You stole " .. item.id .. "!", Color3.fromRGB(255, 200, 80))
+	end
+
+	if not item.hatched and not item.hatchAt then
+		local rarity = Util.GetRarity(Config.MeteorlingById[item.id].Rarity)
+		item.hatchAt = os.time() + rarity.HatchTime
+	end
+	data.Items[slotKey(slot)] = item
+	if item.hatched then
+		discover(player, data, item)
+	end
+	PlotService.RenderPedestal(plot, slot)
+	Remotes.Effect:FireClient(player, "Deposit")
+	Services.Data.MarkDirty(player)
+	return true
+end
+
+-- Steal flow ---------------------------------------------------------------
+
+function PlotService.StartSteal(thief, plot, i)
+	local owner = plot.Owner
+	if not owner or owner == thief or plot.Reserved[i] then
+		return
+	end
+	if not plotOf[thief] then
+		return
+	end
+	if Services.Meteor.GetCarry(thief) then
+		Services.Notify(thief, "Your hands are full!", Color3.fromRGB(255, 180, 80))
+		return
+	end
+	if PlotService.IsLocked(plot) then
+		Services.Notify(thief, "This base is locked!", Color3.fromRGB(255, 90, 90))
+		return
+	end
+	local root = Services.Player.GetAliveParts(thief)
+	if not root then
+		return
+	end
+	local data = Services.Data.Get(owner)
+	local item = data and data.Items[slotKey(i)]
+	if not item then
+		return
+	end
+
+	plot.Reserved[i] = thief
+	PlotService.RenderPedestal(plot, i)
+	local ok = Services.Meteor.Carry(thief, table.clone(item), {
+		StolenFrom = owner,
+		Pedestal = i,
+		Plot = plot,
+	})
+	if not ok then
+		plot.Reserved[i] = nil
+		PlotService.RenderPedestal(plot, i)
+		return
+	end
+	Services.Notify(owner, thief.DisplayName .. " is stealing your " .. item.id .. "! Bonk them!", Color3.fromRGB(255, 60, 60))
+	Remotes.Effect:FireClient(owner, "Alarm")
+end
+
+-- The thief dropped the item (bonked, died, left): it flies back home.
+function PlotService.ReturnStolen(carry)
+	local plot = carry.Plot
+	if not plot or plot.Owner ~= carry.StolenFrom then
+		return
+	end
+	plot.Reserved[carry.Pedestal] = nil
+	PlotService.RenderPedestal(plot, carry.Pedestal)
+	Services.Notify(carry.StolenFrom, "Your " .. carry.Item.id .. " is back home!", Color3.fromRGB(120, 220, 255))
+end
+
+-- Hatching & income --------------------------------------------------------
+
+local function rollMutation(luck)
+	local roll = math.random()
+	for _, mutation in Config.Mutations do
+		if roll < mutation.Chance * luck then
+			return mutation.Name
+		end
+	end
+	return nil
+end
+PlotService.RollMutation = rollMutation
+
+function PlotService.InstantHatch(player)
+	local data = Services.Data.Get(player)
+	if not data then
+		return
+	end
+	local now = os.time()
+	for _, item in data.Items do
+		if not item.hatched then
+			item.hatchAt = now
+		end
+	end
+end
+
+function PlotService.GetIncome(player)
+	local data = Services.Data.Get(player)
+	local plot = plotOf[player]
+	if not data then
+		return 0
+	end
+	local total = 0
+	for key, item in data.Items do
+		local reserved = plot and plot.Reserved[tonumber(key)]
+		if item.hatched and not reserved then
+			total += Util.ItemIncome(item)
+		end
+	end
+	return total * Services.Player.GetIncomeMultiplier(player)
+end
+
+local function hatchTick(player, plot, data)
+	local now = os.time()
+	for key, item in data.Items do
+		local i = tonumber(key)
+		if not item.hatched and item.hatchAt and item.hatchAt <= now and not plot.Reserved[i] then
+			item.hatched = true
+			if not item.mut then
+				item.mut = rollMutation(Services.Player.GetLuck(player))
+			end
+			data.Stats.Hatched += 1
+			local info = Config.MeteorlingById[item.id]
+			local text = "Hatched: " .. item.id .. " (" .. info.Rarity .. ")"
+			if item.mut then
+				text = "Hatched: " .. string.upper(item.mut) .. " " .. item.id .. "!"
+			end
+			Services.Notify(player, text, Util.GetRarity(info.Rarity).Color)
+			Remotes.Effect:FireClient(player, "Hatch", item.id, info.Rarity, item.mut)
+			discover(player, data, item)
+			PlotService.RenderPedestal(plot, i)
+		end
+	end
+end
+
+local function incomeTick(player, plot, data)
+	local income = PlotService.GetIncome(player)
+	if income > 0 then
+		if Services.Player.HasPass(player, "AutoCollect") then
+			data.Money += income
+		else
+			data.Bank += income
+		end
+	end
+	setText(plot.BankLabel, "💰 " .. Util.FormatMoney(data.Bank) .. "\nstep to collect")
+	Services.Data.MarkDirty(player)
+end
+
+local function padTick(player, plot, data, dt)
+	local root = Services.Player.GetAliveParts(player)
+	local now = os.time()
+
+	if root then
+		local position = root.Position
+
+		-- Speed pad: +speed every second
+		if onPad(plot.SpeedPad, position) and data.Speed < Config.MaxSpeed then
+			local before = math.floor(data.Speed)
+			data.Speed = math.min(Config.MaxSpeed, data.Speed + Services.Player.GetPadRate(player) * dt)
+			local after = math.floor(data.Speed)
+			if after > before then
+				padTimers[player] = (padTimers[player] or 0) + (after - before)
+				Services.Player.ApplyWalkSpeed(player)
+				Services.Data.MarkDirty(player)
+			end
+		end
+
+		-- Collect pad
+		if onPad(plot.CollectPad, position) and data.Bank >= 1 then
+			local amount = data.Bank
+			data.Money += amount
+			data.Bank = 0
+			setText(plot.BankLabel, "💰 $0\nstep to collect")
+			Remotes.Effect:FireClient(player, "Collect", amount)
+			Services.Data.MarkDirty(player)
+		end
+
+		-- Lock pad
+		if onPad(plot.LockPad, position) and now >= plot.LockCooldownUntil then
+			local duration = Config.Lock.Duration
+			if Services.Player.HasPass(player, "VIP") then
+				duration = Config.Lock.VipDuration
+			end
+			plot.LockedUntil = now + duration
+			plot.LockCooldownUntil = plot.LockedUntil + Config.Lock.Cooldown
+			Services.Notify(player, "Base locked for " .. duration .. "s!", Color3.fromRGB(255, 120, 120))
+		end
+	end
+
+	-- Laser gate + lock label
+	local locked = now < plot.LockedUntil
+	if locked then
+		plot.Laser.Transparency = 0.35
+		setText(plot.LockLabel, "🔒 LOCKED " .. (plot.LockedUntil - now) .. "s")
+		for _, other in Players:GetPlayers() do
+			if other ~= player then
+				local otherRoot = Services.Player.GetAliveParts(other)
+				if otherRoot and insidePlot(plot, otherRoot.Position, 0) then
+					local outside = Vector3.new(otherRoot.Position.X, otherRoot.Position.Y + 1, plot.Center.Z + plot.HalfZ + 7)
+					otherRoot.CFrame = CFrame.new(outside) * otherRoot.CFrame.Rotation
+					Services.Notify(other, "Laser gate! This base is locked.", Color3.fromRGB(255, 90, 90))
+				end
+			end
+		end
+	else
+		plot.Laser.Transparency = 1
+		if now < plot.LockCooldownUntil then
+			setText(plot.LockLabel, "⏳ " .. (plot.LockCooldownUntil - now) .. "s")
+		else
+			setText(plot.LockLabel, "🔒 LOCK BASE")
+		end
+	end
+end
+
+function PlotService.Start()
+	-- 1 second: hatching + income + speed popups
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			for player, plot in plotOf do
+				local data = Services.Data.Get(player)
+				if data and player.Parent then
+					hatchTick(player, plot, data)
+					incomeTick(player, plot, data)
+					local gained = padTimers[player]
+					if gained and gained > 0 then
+						padTimers[player] = 0
+						Remotes.Effect:FireClient(player, "Speed", gained)
+					end
+				end
+			end
+		end
+	end)
+
+	-- Fast loop: pads and lasers
+	local accumulator = 0
+	RunService.Heartbeat:Connect(function(dt)
+		accumulator += dt
+		if accumulator < 0.2 then
+			return
+		end
+		local step = accumulator
+		accumulator = 0
+		for player, plot in plotOf do
+			local data = Services.Data.Get(player)
+			if data and player.Parent then
+				padTick(player, plot, data, step)
+			end
+		end
+	end)
+end
+
+return PlotService
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX079907FD65E6439AB32B08C8ED71758E">
+					<Properties>
+						<string name="Name">ShopService</string>
+						<ProtectedString name="Source"><![CDATA[-- ShopService: in-game cash purchases (boots, pedestals, rebirth) and Robux purchases.
+
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Util = require(Shared.Util)
+local Remotes = require(Shared.Remotes)
+
+local ShopService = {}
+local Services
+
+local lastRequest = {} -- [player] = os.clock()
+
+local function result(ok, message)
+	return { Ok = ok, Message = message }
+end
+
+local ACTIONS = {}
+
+function ACTIONS.BuyBoots(player, data)
+	if data.Boots >= Config.Boots.MaxLevel then
+		return result(false, "Boots are maxed!")
+	end
+	local cost = Util.BootsCost(data.Boots)
+	if data.Money < cost then
+		return result(false, "Not enough cash!")
+	end
+	data.Money -= cost
+	data.Boots += 1
+	return result(true, "Speed Boots level " .. data.Boots .. "! Pad now gives +" .. Services.Player.GetPadRate(player) .. "/s")
+end
+
+function ACTIONS.BuyPedestal(player, data)
+	if data.Pedestals >= Config.MaxBuyablePedestals then
+		return result(false, "All pedestals unlocked!")
+	end
+	local cost = Util.PedestalCost(data.Pedestals)
+	if data.Money < cost then
+		return result(false, "Not enough cash!")
+	end
+	data.Money -= cost
+	data.Pedestals += 1
+	Services.Plot.RefreshPedestals(player)
+	return result(true, "New pedestal unlocked!")
+end
+
+function ACTIONS.Rebirth(player, data)
+	local cost = Util.RebirthCost(data.Rebirths)
+	if data.Money < cost then
+		return result(false, "You need " .. Util.FormatMoney(cost) .. " to rebirth!")
+	end
+	data.Money = 0
+	data.Bank = 0
+	data.Speed = Config.StartSpeed
+	data.Boots = 0
+	data.Rebirths += 1
+	data.Stats.Rebirths += 1
+	Services.Player.ApplyWalkSpeed(player)
+	Services.NotifyAll(
+		player.DisplayName .. " just rebirthed! (Rebirth " .. data.Rebirths .. ")",
+		Color3.fromRGB(200, 140, 255)
+	)
+	Remotes.Effect:FireClient(player, "Rebirth")
+	return result(true, "Rebirth complete! Income x" .. Util.RebirthMultiplier(data.Rebirths))
+end
+
+-- Robux products ---------------------------------------------------------------
+
+local GRANTS = {}
+
+function GRANTS.SpeedBoost(player, data)
+	data.Speed = math.min(Config.MaxSpeed, data.Speed + 50)
+	Services.Player.ApplyWalkSpeed(player)
+end
+
+function GRANTS.InstantHatch(player)
+	Services.Plot.InstantHatch(player)
+end
+
+function GRANTS.Luck(_player, data)
+	data.LuckUntil = math.max(os.time(), data.LuckUntil) + Config.LuckDuration
+end
+
+function GRANTS.MeteorShower(player)
+	Services.Event.StartShower(player.DisplayName)
+end
+
+function GRANTS.GoldenComet(player)
+	Services.Event.SpawnComet(player.DisplayName)
+end
+
+local function productKeyFor(productId)
+	for key, product in Config.Products do
+		if product.Id ~= 0 and product.Id == productId then
+			return key
+		end
+	end
+	return nil
+end
+
+local function processReceipt(receipt)
+	local player = Players:GetPlayerByUserId(receipt.PlayerId)
+	if not player then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	local data = Services.Data.Get(player)
+	if not data then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	if table.find(data.Receipts, receipt.PurchaseId) then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+	local key = productKeyFor(receipt.ProductId)
+	if not key or not GRANTS[key] then
+		warn("[ShopService] Unknown product " .. tostring(receipt.ProductId))
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+
+	local ok, err = pcall(GRANTS[key], player, data)
+	if not ok then
+		warn("[ShopService] Grant failed: " .. tostring(err))
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+
+	table.insert(data.Receipts, receipt.PurchaseId)
+	while #data.Receipts > 50 do
+		table.remove(data.Receipts, 1)
+	end
+	Services.Data.MarkDirty(player)
+	Services.Data.Save(player)
+	Services.Notify(player, "Purchase complete: " .. Config.Products[key].Name, Color3.fromRGB(255, 220, 90))
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
+
+function ShopService.Init(services)
+	Services = services
+end
+
+function ShopService.Start()
+	MarketplaceService.ProcessReceipt = processReceipt
+
+	Remotes.Request.OnServerInvoke = function(player, action)
+		local now = os.clock()
+		if now - (lastRequest[player] or 0) < 0.15 then
+			return result(false, "Slow down!")
+		end
+		lastRequest[player] = now
+
+		local handler = ACTIONS[action]
+		local data = Services.Data.Get(player)
+		if type(action) ~= "string" or not handler or not data then
+			return result(false, "Unknown action")
+		end
+		local response = handler(player, data)
+		Services.Data.MarkDirty(player)
+		return response
+	end
+
+	Players.PlayerRemoving:Connect(function(player)
+		lastRequest[player] = nil
+	end)
+end
+
+return ShopService
+]]></ProtectedString>
+					</Properties>
+				</Item>
+			</Item>
+		</Item>
+	</Item>
+	<Item class="StarterPlayer" referent="RBX0AB17364163347758539197340BFFE02">
+		<Properties>
+			<string name="Name">StarterPlayer</string>
+		</Properties>
+		<Item class="StarterPlayerScripts" referent="RBXEA18157125D34CA9BA48FEC6B10B4B88">
+			<Properties>
+				<string name="Name">StarterPlayerScripts</string>
+			</Properties>
+			<Item class="Folder" referent="RBX2210F535065F4902894CF5848B2748EB">
+				<Properties>
+					<string name="Name">Client</string>
+				</Properties>
+				<Item class="Folder" referent="RBX88D7FD387CB5449A99031A3F0AB7EDF1">
+					<Properties>
+						<string name="Name">Controllers</string>
+					</Properties>
+					<Item class="ModuleScript" referent="RBX01C114FE5AA34D78A07C4C6877C7AD1E">
+						<Properties>
+							<string name="Name">Effects</string>
+							<ProtectedString name="Source"><![CDATA[-- Effects: knockback from bonks, camera shake from impacts, sounds and popups.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Util = require(Shared.Util)
+local Remotes = require(Shared.Remotes)
+
+local player = Players.LocalPlayer
+
+local Effects = {}
+local UI
+
+local sounds = {}
+local shakeUntil = 0
+local shakePower = 0
+local shaking = false
+
+local SOUND_IDS = {
+	Collect = "rbxasset://sounds/electronicpingshort.wav",
+	Grab = "rbxasset://sounds/swoosh.wav",
+	Deposit = "rbxasset://sounds/victory.wav",
+	Ouch = "rbxasset://sounds/uuhhh.mp3",
+	Alarm = "rbxasset://sounds/Rocket shot.wav",
+	Hatch = "rbxasset://sounds/victory.wav",
+}
+
+local function play(name, volume)
+	local sound = sounds[name]
+	if sound then
+		sound.Volume = volume or 0.5
+		sound:Play()
+	end
+end
+
+local function shake(power, duration)
+	shakePower = math.max(shakePower, power)
+	shakeUntil = math.max(shakeUntil, os.clock() + duration)
+	if shaking then
+		return
+	end
+	shaking = true
+	RunService:BindToRenderStep("MeteorShake", Enum.RenderPriority.Camera.Value + 1, function()
+		local now = os.clock()
+		local camera = workspace.CurrentCamera
+		if now >= shakeUntil or not camera then
+			RunService:UnbindFromRenderStep("MeteorShake")
+			shaking = false
+			shakePower = 0
+			return
+		end
+		local p = shakePower * math.clamp((shakeUntil - now) * 2, 0, 1)
+		camera.CFrame = camera.CFrame
+			* CFrame.Angles(math.rad((math.random() - 0.5) * p), math.rad((math.random() - 0.5) * p), 0)
+	end)
+end
+
+local function bonkPopup(position)
+	local anchor = Instance.new("Part")
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.new(1, 1, 1)
+	anchor.Position = position + Vector3.new(0, 3, 0)
+	anchor.Parent = workspace
+
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.new(6, 0, 2, 0)
+	gui.LightInfluence = 0
+	gui.AlwaysOnTop = true
+	gui.MaxDistance = 120
+	gui.Parent = anchor
+	local text = Instance.new("TextLabel")
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundTransparency = 1
+	text.Font = Enum.Font.FredokaOne
+	text.TextScaled = true
+	text.Text = "💥 BONK!"
+	text.TextColor3 = Color3.fromRGB(255, 230, 80)
+	text.TextStrokeTransparency = 0
+	text.Parent = gui
+
+	TweenService:Create(anchor, TweenInfo.new(0.9), { Position = anchor.Position + Vector3.new(0, 4, 0) }):Play()
+	TweenService:Create(text, TweenInfo.new(0.9), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	task.delay(1, function()
+		anchor:Destroy()
+	end)
+end
+
+local HANDLERS = {}
+
+function HANDLERS.Impact(position, size)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local distance = (root.Position - position).Magnitude
+	local reach = 60 + size * 12
+	if distance < reach then
+		shake((1 - distance / reach) * (1.5 + size * 0.4), 0.5)
+	end
+end
+
+function HANDLERS.Collect(amount)
+	UI.FloatText("+" .. Util.FormatMoney(amount), Color3.fromRGB(120, 255, 120), false)
+	play("Collect", 0.4)
+end
+
+function HANDLERS.Speed(gain)
+	UI.FloatText("+" .. gain .. " ⚡", Color3.fromRGB(120, 220, 255), true)
+end
+
+function HANDLERS.Grab()
+	play("Grab", 0.6)
+end
+
+function HANDLERS.Deposit()
+	play("Deposit", 0.35)
+	UI.Popup("Delivered! ☄️", Color3.fromRGB(120, 255, 160))
+end
+
+function HANDLERS.Hatch(id, rarityName, mutation)
+	local rarity = Util.GetRarity(rarityName)
+	local rarityIndex = Config.RarityIndex[rarityName] or 1
+	if rarityIndex >= 4 or mutation then
+		local text = "🐣 " .. id .. "!"
+		if mutation then
+			text = "🐣 " .. string.upper(mutation) .. " " .. id .. "!"
+		end
+		UI.Popup(text, rarity.Color)
+		play("Hatch", 0.5)
+		if rarityIndex >= 6 then
+			shake(2, 0.6)
+		end
+	end
+end
+
+function HANDLERS.Discovered(id, rarityName)
+	-- Wait for the hatch popup to finish first
+	task.delay(1.8, function()
+		UI.Popup("📖 NEW: " .. id, Util.GetRarity(rarityName).Color)
+	end)
+end
+
+function HANDLERS.Alarm()
+	UI.Flash(Color3.fromRGB(255, 40, 40))
+	play("Alarm", 0.5)
+end
+
+function HANDLERS.Bonk(position)
+	bonkPopup(position)
+end
+
+function HANDLERS.Rebirth()
+	UI.Flash(Color3.fromRGB(200, 140, 255))
+	UI.Popup("🌟 REBIRTH! 🌟", Color3.fromRGB(220, 170, 255))
+	play("Hatch", 0.6)
+end
+
+local function onKnockback(velocity, stunTime)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid or humanoid.Health <= 0 then
+		return
+	end
+	humanoid.PlatformStand = true
+	root.AssemblyLinearVelocity = velocity
+	play("Ouch", 0.6)
+	shake(2.5, 0.35)
+	task.delay(stunTime or 0.8, function()
+		if humanoid.Parent and humanoid.Health > 0 then
+			humanoid.PlatformStand = false
+			humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+		end
+	end)
+end
+
+function Effects.Init(ui)
+	UI = ui
+	for name, id in SOUND_IDS do
+		local sound = Instance.new("Sound")
+		sound.Name = "Fx_" .. name
+		sound.SoundId = id
+		sound.Parent = SoundService
+		sounds[name] = sound
+	end
+
+	Remotes.Knockback.OnClientEvent:Connect(onKnockback)
+	Remotes.Effect.OnClientEvent:Connect(function(kind, ...)
+		local handler = HANDLERS[kind]
+		if handler then
+			handler(...)
+		end
+	end)
+end
+
+function Effects.SetState(_state) end
+
+return Effects
+]]></ProtectedString>
+						</Properties>
+					</Item>
+					<Item class="ModuleScript" referent="RBXCEAB54448F5E424FBAB3011A6B876319">
+						<Properties>
+							<string name="Name">UI</string>
+							<ProtectedString name="Source"><![CDATA[-- UI: the whole HUD built in code. Cash, speed, side menu, Shop / Index / Rebirth
+-- panels, toasts, event banner and popups. Works on PC and mobile (auto scale).
+
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Util = require(Shared.Util)
+local Remotes = require(Shared.Remotes)
+
+local player = Players.LocalPlayer
+
+local UI = {}
+
+local FONT = Enum.Font.FredokaOne
+local WHITE = Color3.new(1, 1, 1)
+local DARK = Color3.fromRGB(24, 22, 38)
+local GREEN = Color3.fromRGB(70, 210, 100)
+local RED = Color3.fromRGB(240, 80, 80)
+
+local PRODUCT_ORDER = { "SpeedBoost", "InstantHatch", "Luck", "MeteorShower", "GoldenComet" }
+local PASS_ORDER = { "DoubleMoney", "DoubleSpeed", "VIP", "AutoCollect", "BigHammer" }
+
+local state = nil
+local gui
+local scales = {}
+local refs = {}
+local panels = {}
+local toastOrder = 0
+local clickSound
+
+-- Helpers ---------------------------------------------------------------------
+
+local function create(className, props, children)
+	local inst = Instance.new(className)
+	local parent = props.Parent
+	for key, value in props do
+		if key ~= "Parent" then
+			inst[key] = value
+		end
+	end
+	if children then
+		for _, child in children do
+			child.Parent = inst
+		end
+	end
+	if parent then
+		inst.Parent = parent
+	end
+	return inst
+end
+
+local function corner(radius)
+	return create("UICorner", { CornerRadius = UDim.new(0, radius or 12) })
+end
+
+local function stroke(color, thickness)
+	return create("UIStroke", {
+		Color = color or Color3.new(0, 0, 0),
+		Thickness = thickness or 2,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	})
+end
+
+local function gradient(top, bottom)
+	return create("UIGradient", { Color = ColorSequence.new(top, bottom), Rotation = 90 })
+end
+
+local function label(props)
+	local defaults = {
+		BackgroundTransparency = 1,
+		Font = FONT,
+		TextScaled = true,
+		TextColor3 = WHITE,
+		TextStrokeTransparency = 0.3,
+	}
+	for key, value in props do
+		defaults[key] = value
+	end
+	return create("TextLabel", defaults)
+end
+
+local function button(props, color)
+	local defaults = {
+		BackgroundColor3 = color or GREEN,
+		Font = FONT,
+		TextScaled = true,
+		TextColor3 = WHITE,
+		TextStrokeTransparency = 0.3,
+		AutoButtonColor = true,
+	}
+	for key, value in props do
+		defaults[key] = value
+	end
+	local btn = create("TextButton", defaults, {
+		corner(10),
+		stroke(Color3.new(0, 0, 0), 2),
+		create("UIPadding", {
+			PaddingLeft = UDim.new(0, 6),
+			PaddingRight = UDim.new(0, 6),
+			PaddingTop = UDim.new(0, 4),
+			PaddingBottom = UDim.new(0, 4),
+		}),
+	})
+	return btn
+end
+
+local function scaled(frame)
+	local s = create("UIScale", { Parent = frame })
+	table.insert(scales, s)
+	return frame
+end
+
+local function updateScale()
+	local camera = workspace.CurrentCamera
+	if not camera then
+		return
+	end
+	local size = camera.ViewportSize
+	local value = math.clamp(math.min(size.X / 1280, size.Y / 760), 0.5, 1.2)
+	for _, s in scales do
+		s.Scale = value
+	end
+end
+
+local function playClick()
+	if clickSound then
+		clickSound:Play()
+	end
+end
+
+local function request(action)
+	playClick()
+	local ok, response = pcall(function()
+		return Remotes.Request:InvokeServer(action)
+	end)
+	if ok and type(response) == "table" then
+		local color = RED
+		if response.Ok then
+			color = GREEN
+		end
+		UI.Toast(response.Message, color)
+	end
+end
+
+local function promptPurchase(kind, key)
+	playClick()
+	local entry
+	if kind == "Pass" then
+		entry = Config.GamePasses[key]
+	else
+		entry = Config.Products[key]
+	end
+	if not entry or entry.Id == 0 then
+		UI.Toast("Coming soon!", Color3.fromRGB(255, 200, 90))
+		return
+	end
+	if kind == "Pass" then
+		MarketplaceService:PromptGamePassPurchase(player, entry.Id)
+	else
+		MarketplaceService:PromptProductPurchase(player, entry.Id)
+	end
+end
+
+-- Top bar ---------------------------------------------------------------------
+
+local function buildTopBar()
+	local top = scaled(create("Frame", {
+		Name = "TopBar",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 6),
+		Size = UDim2.fromOffset(340, 124),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	}))
+
+	local cash = create("Frame", {
+		Name = "Cash",
+		Size = UDim2.new(1, 0, 0, 72),
+		BackgroundColor3 = WHITE,
+		Parent = top,
+	}, {
+		corner(16),
+		stroke(Color3.fromRGB(60, 40, 0), 3),
+		gradient(Color3.fromRGB(255, 225, 110), Color3.fromRGB(240, 160, 30)),
+	})
+	refs.Money = label({
+		Name = "Money",
+		Position = UDim2.new(0, 10, 0, 4),
+		Size = UDim2.new(1, -20, 0, 42),
+		Text = "$0",
+		TextStrokeTransparency = 0,
+		Parent = cash,
+	})
+	refs.Income = label({
+		Name = "Income",
+		Position = UDim2.new(0, 10, 0, 44),
+		Size = UDim2.new(1, -20, 0, 24),
+		Text = "+$0/s",
+		TextColor3 = Color3.fromRGB(255, 255, 230),
+		Parent = cash,
+	})
+
+	local speed = create("Frame", {
+		Name = "Speed",
+		Position = UDim2.new(0, 0, 0, 80),
+		Size = UDim2.new(1, 0, 0, 40),
+		BackgroundColor3 = DARK,
+		BackgroundTransparency = 0.15,
+		ClipsDescendants = true,
+		Parent = top,
+	}, {
+		corner(12),
+		stroke(Color3.fromRGB(60, 200, 255), 2),
+	})
+	refs.SpeedFill = create("Frame", {
+		Name = "Fill",
+		Size = UDim2.fromScale(0, 1),
+		BackgroundColor3 = Color3.fromRGB(60, 200, 255),
+		BackgroundTransparency = 0.35,
+		Parent = speed,
+	}, { corner(12) })
+	refs.Speed = label({
+		Name = "SpeedText",
+		Position = UDim2.new(0, 8, 0, 4),
+		Size = UDim2.new(1, -16, 1, -8),
+		Text = "⚡ 16 Speed",
+		ZIndex = 2,
+		Parent = speed,
+	})
+	refs.TopBar = top
+end
+
+-- Left menu -------------------------------------------------------------------
+
+local function buildMenu()
+	local menu = scaled(create("Frame", {
+		Name = "Menu",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 10, 0.5, 0),
+		Size = UDim2.fromOffset(92, 300),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	}, {
+		create("UIListLayout", {
+			Padding = UDim.new(0, 10),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+		}),
+	}))
+
+	local entries = {
+		{ Name = "Shop", Icon = "🛒", Color = Color3.fromRGB(70, 200, 100) },
+		{ Name = "Index", Icon = "📖", Color = Color3.fromRGB(70, 150, 255) },
+		{ Name = "Rebirth", Icon = "🌟", Color = Color3.fromRGB(170, 90, 255) },
+	}
+	for i, entry in entries do
+		local btn = create("TextButton", {
+			Name = entry.Name,
+			LayoutOrder = i,
+			Size = UDim2.fromOffset(88, 88),
+			BackgroundColor3 = WHITE,
+			Text = "",
+			AutoButtonColor = true,
+			Parent = menu,
+		}, {
+			corner(18),
+			stroke(Color3.new(0, 0, 0), 3),
+			gradient(entry.Color:Lerp(WHITE, 0.25), entry.Color),
+		})
+		label({
+			Size = UDim2.new(1, 0, 0.62, 0),
+			Text = entry.Icon,
+			TextStrokeTransparency = 1,
+			Parent = btn,
+		})
+		label({
+			Position = UDim2.new(0, 4, 0.6, 0),
+			Size = UDim2.new(1, -8, 0.34, 0),
+			Text = entry.Name,
+			TextStrokeTransparency = 0,
+			Parent = btn,
+		})
+		btn.MouseButton1Click:Connect(function()
+			playClick()
+			UI.TogglePanel(entry.Name)
+		end)
+	end
+end
+
+-- Panels ----------------------------------------------------------------------
+
+local function makePanel(name, title, color)
+	local panel = scaled(create("Frame", {
+		Name = name .. "Panel",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.52),
+		Size = UDim2.fromOffset(600, 440),
+		BackgroundColor3 = DARK,
+		Visible = false,
+		Parent = gui,
+	}, {
+		corner(20),
+		stroke(color, 4),
+	}))
+	local header = create("Frame", {
+		Name = "Header",
+		Size = UDim2.new(1, 0, 0, 56),
+		BackgroundColor3 = WHITE,
+		Parent = panel,
+	}, {
+		corner(20),
+		gradient(color:Lerp(WHITE, 0.2), color),
+	})
+	label({
+		Position = UDim2.new(0, 20, 0, 8),
+		Size = UDim2.new(1, -100, 1, -16),
+		Text = title,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextStrokeTransparency = 0,
+		Parent = header,
+	})
+	local close = button({
+		Name = "Close",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -10, 0.5, 0),
+		Size = UDim2.fromOffset(44, 44),
+		Text = "X",
+		Parent = header,
+	}, RED)
+	close.MouseButton1Click:Connect(function()
+		playClick()
+		panel.Visible = false
+	end)
+	local content = create("Frame", {
+		Name = "Content",
+		Position = UDim2.new(0, 14, 0, 66),
+		Size = UDim2.new(1, -28, 1, -80),
+		BackgroundTransparency = 1,
+		Parent = panel,
+	})
+	panels[name] = panel
+	return content
+end
+
+local function scrolling(parent)
+	return create("ScrollingFrame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 8,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		Parent = parent,
+	})
+end
+
+local function sectionHeader(parent, order, text)
+	label({
+		LayoutOrder = order,
+		Size = UDim2.new(1, -12, 0, 30),
+		Text = text,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(255, 220, 120),
+		Parent = parent,
+	})
+end
+
+local function shopRow(parent, order, title, description, buttonColor, onClick)
+	local row = create("Frame", {
+		LayoutOrder = order,
+		Size = UDim2.new(1, -12, 0, 70),
+		BackgroundColor3 = Color3.fromRGB(40, 36, 62),
+		Parent = parent,
+	}, {
+		corner(12),
+	})
+	local titleLabel = label({
+		Position = UDim2.new(0, 12, 0, 6),
+		Size = UDim2.new(1, -170, 0, 30),
+		Text = title,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = row,
+	})
+	local descLabel = label({
+		Position = UDim2.new(0, 12, 0, 38),
+		Size = UDim2.new(1, -170, 0, 24),
+		Text = description,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(200, 200, 220),
+		TextStrokeTransparency = 1,
+		Parent = row,
+	})
+	local btn = button({
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -10, 0.5, 0),
+		Size = UDim2.fromOffset(140, 50),
+		Text = "...",
+		Parent = row,
+	}, buttonColor)
+	btn.MouseButton1Click:Connect(onClick)
+	return { Title = titleLabel, Desc = descLabel, Button = btn }
+end
+
+local function buildShop()
+	local content = makePanel("Shop", "🛒 Shop", Color3.fromRGB(70, 200, 100))
+	local scroll = scrolling(content)
+	create("UIListLayout", {
+		Padding = UDim.new(0, 8),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = scroll,
+	})
+
+	local order = 0
+	local function nextOrder()
+		order += 1
+		return order
+	end
+
+	sectionHeader(scroll, nextOrder(), "Upgrades (cash)")
+	refs.BootsRow = shopRow(scroll, nextOrder(), "Speed Boots", "", GREEN, function()
+		request("BuyBoots")
+	end)
+	refs.PedestalRow = shopRow(scroll, nextOrder(), "Extra Pedestal", "", GREEN, function()
+		request("BuyPedestal")
+	end)
+
+	sectionHeader(scroll, nextOrder(), "Boosts (Robux)")
+	for _, key in PRODUCT_ORDER do
+		local product = Config.Products[key]
+		local row = shopRow(scroll, nextOrder(), product.Name, product.Description, Color3.fromRGB(0, 170, 90), function()
+			promptPurchase("Product", key)
+		end)
+		row.Button.Text = "R$ " .. product.Price
+	end
+
+	sectionHeader(scroll, nextOrder(), "Game Passes (forever)")
+	refs.PassRows = {}
+	for _, key in PASS_ORDER do
+		local pass = Config.GamePasses[key]
+		local row = shopRow(scroll, nextOrder(), pass.Name, pass.Description, Color3.fromRGB(255, 170, 40), function()
+			if state and state.Passes and state.Passes[key] then
+				return
+			end
+			promptPurchase("Pass", key)
+		end)
+		row.Button.Text = "R$ " .. pass.Price
+		refs.PassRows[key] = row
+	end
+end
+
+local function buildIndex()
+	local content = makePanel("Index", "📖 Meteorling Index", Color3.fromRGB(70, 150, 255))
+	refs.IndexHeader = label({
+		Size = UDim2.new(1, 0, 0, 30),
+		Text = "Discovered 0/" .. #Config.Meteorlings,
+		TextColor3 = Color3.fromRGB(180, 220, 255),
+		Parent = content,
+	})
+	local holder = create("Frame", {
+		Position = UDim2.new(0, 0, 0, 36),
+		Size = UDim2.new(1, 0, 1, -36),
+		BackgroundTransparency = 1,
+		Parent = content,
+	})
+	local scroll = scrolling(holder)
+	create("UIGridLayout", {
+		CellSize = UDim2.fromOffset(126, 136),
+		CellPadding = UDim2.fromOffset(8, 8),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = scroll,
+	})
+
+	refs.IndexCards = {}
+	for i, info in Config.Meteorlings do
+		local rarity = Util.GetRarity(info.Rarity)
+		local card = create("Frame", {
+			LayoutOrder = i,
+			BackgroundColor3 = Color3.fromRGB(40, 36, 62),
+			Parent = scroll,
+		}, {
+			corner(12),
+			stroke(rarity.Color, 2),
+		})
+		local circle = create("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 8),
+			Size = UDim2.fromOffset(56, 56),
+			BackgroundColor3 = Color3.fromRGB(10, 10, 14),
+			Parent = card,
+		}, {
+			create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+			stroke(Color3.new(0, 0, 0), 2),
+		})
+		local name = label({
+			Position = UDim2.new(0, 4, 0, 68),
+			Size = UDim2.new(1, -8, 0, 22),
+			Text = "???",
+			Parent = card,
+		})
+		label({
+			Position = UDim2.new(0, 4, 0, 90),
+			Size = UDim2.new(1, -8, 0, 18),
+			Text = info.Rarity,
+			TextColor3 = rarity.Color,
+			Parent = card,
+		})
+		local income = label({
+			Position = UDim2.new(0, 4, 0, 110),
+			Size = UDim2.new(1, -8, 0, 18),
+			Text = "",
+			TextColor3 = Color3.fromRGB(140, 255, 140),
+			Parent = card,
+		})
+		refs.IndexCards[info.Id] = { Circle = circle, Name = name, Income = income, Info = info }
+	end
+end
+
+local function buildRebirth()
+	local content = makePanel("Rebirth", "🌟 Rebirth", Color3.fromRGB(170, 90, 255))
+	refs.RebirthCount = label({
+		Size = UDim2.new(1, 0, 0, 44),
+		Text = "Rebirths: 0",
+		Parent = content,
+	})
+	refs.RebirthMult = label({
+		Position = UDim2.new(0, 0, 0, 52),
+		Size = UDim2.new(1, 0, 0, 36),
+		Text = "Income x1 → x1.5",
+		TextColor3 = Color3.fromRGB(140, 255, 140),
+		Parent = content,
+	})
+	refs.RebirthCost = label({
+		Position = UDim2.new(0, 0, 0, 96),
+		Size = UDim2.new(1, 0, 0, 34),
+		Text = "Cost: $0",
+		TextColor3 = Color3.fromRGB(255, 220, 120),
+		Parent = content,
+	})
+	local bar = create("Frame", {
+		Position = UDim2.new(0.1, 0, 0, 140),
+		Size = UDim2.new(0.8, 0, 0, 26),
+		BackgroundColor3 = Color3.fromRGB(40, 36, 62),
+		ClipsDescendants = true,
+		Parent = content,
+	}, { corner(10) })
+	refs.RebirthFill = create("Frame", {
+		Size = UDim2.fromScale(0, 1),
+		BackgroundColor3 = Color3.fromRGB(170, 90, 255),
+		Parent = bar,
+	}, { corner(10) })
+	label({
+		Position = UDim2.new(0, 0, 0, 176),
+		Size = UDim2.new(1, 0, 0, 50),
+		Text = "Resets cash, speed and boots.\nKeeps your Meteorlings and Index!",
+		TextColor3 = Color3.fromRGB(200, 200, 220),
+		TextStrokeTransparency = 1,
+		Parent = content,
+	})
+	refs.RebirthButton = button({
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -6),
+		Size = UDim2.fromOffset(260, 66),
+		Text = "REBIRTH",
+		Parent = content,
+	}, Color3.fromRGB(170, 90, 255))
+	refs.RebirthButton.MouseButton1Click:Connect(function()
+		request("Rebirth")
+	end)
+end
+
+-- Toasts, banner, popups, timers ---------------------------------------------
+
+local function buildOverlay()
+	refs.Toasts = scaled(create("Frame", {
+		Name = "Toasts",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 140),
+		Size = UDim2.fromOffset(560, 240),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	}, {
+		create("UIListLayout", {
+			Padding = UDim.new(0, 6),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		}),
+	}))
+
+	refs.Banner = scaled(create("Frame", {
+		Name = "Banner",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0.22, 0),
+		Size = UDim2.fromOffset(720, 120),
+		BackgroundColor3 = DARK,
+		BackgroundTransparency = 0.15,
+		Visible = false,
+		Parent = gui,
+	}, {
+		corner(20),
+		stroke(Color3.fromRGB(255, 160, 60), 4),
+	}))
+	refs.BannerTitle = label({
+		Position = UDim2.new(0, 12, 0, 8),
+		Size = UDim2.new(1, -24, 0, 54),
+		Text = "",
+		TextStrokeTransparency = 0,
+		Parent = refs.Banner,
+	})
+	refs.BannerSub = label({
+		Position = UDim2.new(0, 12, 0, 64),
+		Size = UDim2.new(1, -24, 0, 26),
+		Text = "",
+		TextColor3 = Color3.fromRGB(230, 230, 240),
+		Parent = refs.Banner,
+	})
+	refs.BannerTimer = label({
+		Position = UDim2.new(0, 12, 0, 92),
+		Size = UDim2.new(1, -24, 0, 22),
+		Text = "",
+		TextColor3 = Color3.fromRGB(255, 220, 120),
+		Parent = refs.Banner,
+	})
+
+	refs.Timers = scaled(create("Frame", {
+		Name = "Timers",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -10, 0, 60),
+		Size = UDim2.fromOffset(240, 120),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	}, {
+		create("UIListLayout", {
+			Padding = UDim.new(0, 6),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			HorizontalAlignment = Enum.HorizontalAlignment.Right,
+		}),
+	}))
+	local function timerLabel(order, color)
+		return label({
+			LayoutOrder = order,
+			Size = UDim2.fromOffset(240, 34),
+			BackgroundColor3 = DARK,
+			BackgroundTransparency = 0.25,
+			Text = "",
+			TextColor3 = color,
+			Visible = false,
+			Parent = refs.Timers,
+		})
+	end
+	refs.ShowerTimer = timerLabel(1, Color3.fromRGB(255, 160, 80))
+	refs.LuckTimer = timerLabel(2, Color3.fromRGB(120, 255, 140))
+	for _, timer in { refs.ShowerTimer, refs.LuckTimer } do
+		corner(10).Parent = timer
+	end
+
+	refs.Carry = scaled(label({
+		Name = "Carry",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -96),
+		Size = UDim2.fromOffset(560, 44),
+		BackgroundColor3 = DARK,
+		BackgroundTransparency = 0.2,
+		Text = "",
+		Visible = false,
+		Parent = gui,
+	}))
+	corner(12).Parent = refs.Carry
+
+	refs.Popup = scaled(label({
+		Name = "Popup",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.4),
+		Size = UDim2.fromOffset(700, 90),
+		Text = "",
+		TextStrokeTransparency = 0,
+		Visible = false,
+		Parent = gui,
+	}))
+
+	refs.Flash = create("Frame", {
+		Name = "Flash",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = RED,
+		BackgroundTransparency = 1,
+		ZIndex = 50,
+		Active = false,
+		Parent = gui,
+	})
+end
+
+function UI.Toast(text, color)
+	if not refs.Toasts then
+		return
+	end
+	toastOrder += 1
+	local toast = label({
+		LayoutOrder = toastOrder,
+		Size = UDim2.fromOffset(540, 34),
+		BackgroundColor3 = DARK,
+		BackgroundTransparency = 0.25,
+		Text = text,
+		TextColor3 = color or WHITE,
+		TextStrokeTransparency = 0,
+		Parent = refs.Toasts,
+	})
+	corner(10).Parent = toast
+	create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), Parent = toast })
+
+	local toasts = {}
+	for _, child in refs.Toasts:GetChildren() do
+		if child:IsA("TextLabel") then
+			table.insert(toasts, child)
+		end
+	end
+	table.sort(toasts, function(a, b)
+		return a.LayoutOrder < b.LayoutOrder
+	end)
+	while #toasts > 5 do
+		table.remove(toasts, 1):Destroy()
+	end
+
+	task.delay(3.5, function()
+		if toast.Parent then
+			local fade = TweenService:Create(toast, TweenInfo.new(0.4), { TextTransparency = 1, BackgroundTransparency = 1, TextStrokeTransparency = 1 })
+			fade:Play()
+			fade.Completed:Wait()
+			toast:Destroy()
+		end
+	end)
+end
+
+local bannerToken = 0
+function UI.Banner(data)
+	bannerToken += 1
+	local token = bannerToken
+	local banner = refs.Banner
+	refs.BannerTitle.Text = data.Title or ""
+	refs.BannerTitle.TextColor3 = data.Color or WHITE
+	refs.BannerSub.Text = data.Subtitle or ""
+	banner:FindFirstChildOfClass("UIStroke").Color = data.Color or WHITE
+	banner.Visible = true
+	banner.Size = UDim2.fromOffset(720 * 0.6, 120 * 0.6)
+	TweenService:Create(banner, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Size = UDim2.fromOffset(720, 120) }):Play()
+
+	task.spawn(function()
+		local shownUntil = os.clock() + 8
+		while token == bannerToken and os.clock() < shownUntil do
+			local left = (data.EndsAt or 0) - workspace:GetServerTimeNow()
+			if left > 0 then
+				refs.BannerTimer.Text = Util.FormatTime(left)
+			else
+				refs.BannerTimer.Text = ""
+			end
+			task.wait(0.25)
+		end
+		if token == bannerToken then
+			banner.Visible = false
+		end
+	end)
+end
+
+local popupToken = 0
+function UI.Popup(text, color)
+	popupToken += 1
+	local token = popupToken
+	local popup = refs.Popup
+	popup.Text = text
+	popup.TextColor3 = color or WHITE
+	popup.TextTransparency = 0
+	popup.TextStrokeTransparency = 0
+	popup.Visible = true
+	popup.Size = UDim2.fromOffset(200, 30)
+	TweenService:Create(popup, TweenInfo.new(0.4, Enum.EasingStyle.Back), { Size = UDim2.fromOffset(700, 90) }):Play()
+	task.delay(2.2, function()
+		if token ~= popupToken then
+			return
+		end
+		local fade = TweenService:Create(popup, TweenInfo.new(0.5), { TextTransparency = 1, TextStrokeTransparency = 1 })
+		fade:Play()
+		fade.Completed:Wait()
+		if token == popupToken then
+			popup.Visible = false
+		end
+	end)
+end
+
+function UI.Flash(color)
+	refs.Flash.BackgroundColor3 = color or RED
+	refs.Flash.BackgroundTransparency = 0.55
+	TweenService:Create(refs.Flash, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
+end
+
+-- Floating "+$123" text near the top bar
+function UI.FloatText(text, color, fromSpeed)
+	local yOffset = 40
+	if fromSpeed then
+		yOffset = 100
+	end
+	local float = label({
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, math.random(-60, 60), 0, yOffset),
+		Size = UDim2.fromOffset(220, 36),
+		Text = text,
+		TextColor3 = color or WHITE,
+		TextStrokeTransparency = 0,
+		ZIndex = 20,
+		Parent = refs.TopBar,
+	})
+	local tween = TweenService:Create(float, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Position = float.Position + UDim2.fromOffset(0, 60),
+		TextTransparency = 1,
+		TextStrokeTransparency = 1,
+	})
+	tween:Play()
+	tween.Completed:Connect(function()
+		float:Destroy()
+	end)
+end
+
+function UI.TogglePanel(name)
+	for panelName, panel in panels do
+		if panelName == name then
+			panel.Visible = not panel.Visible
+		else
+			panel.Visible = false
+		end
+	end
+end
+
+-- State updates ---------------------------------------------------------------
+
+local function setButton(btn, text, enabled, color)
+	btn.Text = text
+	btn.AutoButtonColor = enabled
+	if enabled then
+		btn.BackgroundColor3 = color or GREEN
+	else
+		btn.BackgroundColor3 = Color3.fromRGB(90, 90, 105)
+	end
+end
+
+function UI.Update(newState)
+	state = newState
+
+	refs.Money.Text = Util.FormatMoney(state.Money)
+	local incomeText = "+" .. Util.FormatMoney(state.Income) .. "/s"
+	if state.Bank >= 1 and not state.Passes.AutoCollect then
+		incomeText ..= "   (" .. Util.FormatMoney(state.Bank) .. " at base)"
+	end
+	refs.Income.Text = incomeText
+
+	local speedText = "⚡ " .. state.Speed .. " Speed   (+" .. state.PadRate .. "/s on pad)"
+	if state.Speed >= state.MaxSpeed then
+		speedText = "⚡ " .. state.Speed .. " Speed   MAX!"
+	end
+	refs.Speed.Text = speedText
+	refs.SpeedFill.Size = UDim2.fromScale(math.clamp(state.Speed / state.MaxSpeed, 0, 1), 1)
+
+	-- Shop
+	local boots = refs.BootsRow
+	boots.Title.Text = "Speed Boots  Lv " .. state.Boots .. "/" .. state.BootsMax
+	if state.BootsCost then
+		boots.Desc.Text = "Speed Pad: +" .. state.PadRate .. "/s  →  more per level"
+		setButton(boots.Button, Util.FormatMoney(state.BootsCost), state.Money >= state.BootsCost)
+	else
+		boots.Desc.Text = "Speed Pad: +" .. state.PadRate .. "/s"
+		setButton(boots.Button, "MAX", false)
+	end
+
+	local pedestal = refs.PedestalRow
+	pedestal.Title.Text = "Extra Pedestal  " .. state.Pedestals .. "/" .. state.MaxBuyable
+	pedestal.Desc.Text = "Slots used: " .. state.Used .. "/" .. state.PedestalsTotal
+	if state.PedestalCost then
+		setButton(pedestal.Button, Util.FormatMoney(state.PedestalCost), state.Money >= state.PedestalCost)
+	else
+		setButton(pedestal.Button, "MAX", false)
+	end
+
+	for key, row in refs.PassRows do
+		if state.Passes[key] then
+			setButton(row.Button, "OWNED ✓", false)
+		end
+	end
+
+	-- Index
+	refs.IndexHeader.Text = "Discovered "
+		.. state.IndexCount
+		.. "/"
+		.. #Config.Meteorlings
+		.. "   •   +"
+		.. math.floor(state.IndexCount * Config.IndexBonusPerEntry * 100)
+		.. "% income"
+	for id, card in refs.IndexCards do
+		if state.Index[id] then
+			card.Circle.BackgroundColor3 = card.Info.Color
+			card.Name.Text = id
+			card.Income.Text = Util.FormatMoney(card.Info.Income) .. "/s"
+		else
+			card.Circle.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+			card.Name.Text = "???"
+			card.Income.Text = ""
+		end
+	end
+
+	-- Rebirth
+	refs.RebirthCount.Text = "Rebirths: " .. state.Rebirths
+	refs.RebirthMult.Text = "Rebirth bonus: x" .. state.RebirthMult .. "  →  x" .. state.NextRebirthMult
+	refs.RebirthCost.Text = "Cost: " .. Util.FormatMoney(state.RebirthCost)
+	refs.RebirthFill.Size = UDim2.fromScale(math.clamp(state.Money / state.RebirthCost, 0, 1), 1)
+	setButton(refs.RebirthButton, "REBIRTH", state.Money >= state.RebirthCost, Color3.fromRGB(170, 90, 255))
+end
+
+function UI.UpdateCarry()
+	local id = player:GetAttribute("Carrying")
+	if not id then
+		refs.Carry.Visible = false
+		return
+	end
+	local info = Config.MeteorlingById[id]
+	local rarity = Util.GetRarity(info and info.Rarity or "Common")
+	if player:GetAttribute("CarryStolen") then
+		refs.Carry.Text = "😈 STOLEN " .. id .. "! Run home before they bonk you!"
+	else
+		refs.Carry.Text = "☄️ " .. rarity.Name .. " Meteor! Follow the beam to your base!"
+	end
+	refs.Carry.TextColor3 = rarity.Color
+	if rarity.Name == "Secret" then
+		refs.Carry.TextColor3 = WHITE
+	end
+	refs.Carry.Visible = true
+end
+
+local function timerLoop()
+	while true do
+		task.wait(0.5)
+		if state then
+			local now = workspace:GetServerTimeNow()
+			local showerLeft = (state.ShowerUntil or 0) - now
+			refs.ShowerTimer.Visible = showerLeft > 0
+			if showerLeft > 0 then
+				refs.ShowerTimer.Text = "☄️ Shower " .. Util.FormatTime(showerLeft)
+			end
+			local luckLeft = (state.LuckUntil or 0) - now
+			refs.LuckTimer.Visible = luckLeft > 0
+			if luckLeft > 0 then
+				refs.LuckTimer.Text = "🍀 2x Luck " .. Util.FormatTime(luckLeft)
+			end
+		end
+	end
+end
+
+function UI.Init()
+	gui = create("ScreenGui", {
+		Name = "MeteorHUD",
+		ResetOnSpawn = false,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+		Parent = player:WaitForChild("PlayerGui"),
+	})
+
+	clickSound = create("Sound", {
+		Name = "Click",
+		SoundId = "rbxasset://sounds/electronicpingshort.wav",
+		Volume = 0.4,
+		Parent = SoundService,
+	})
+
+	buildTopBar()
+	buildMenu()
+	buildShop()
+	buildIndex()
+	buildRebirth()
+	buildOverlay()
+
+	updateScale()
+	local camera = workspace.CurrentCamera
+	if camera then
+		camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
+	end
+
+	player:GetAttributeChangedSignal("Carrying"):Connect(UI.UpdateCarry)
+	player:GetAttributeChangedSignal("CarryStolen"):Connect(UI.UpdateCarry)
+	UI.UpdateCarry()
+
+	task.spawn(timerLoop)
+end
+
+return UI
+]]></ProtectedString>
+						</Properties>
+					</Item>
+					<Item class="ModuleScript" referent="RBX0778E98A739F4FA0A85A1D6E06AFE8B9">
+						<Properties>
+							<string name="Name">World</string>
+							<ProtectedString name="Source"><![CDATA[-- World: client-side touches on the 3D world.
+--   * shows "Sell" prompts only on your base and "Steal" prompts only on other bases
+--   * hatch countdowns above meteors
+--   * Meteorlings bob and sway on their pedestals
+--   * a beam that points from you to your base while you carry something
+
+local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Util = require(Shared.Util)
+
+local player = Players.LocalPlayer
+
+local World = {}
+
+local beam = nil
+local beamAttachment = nil
+
+local function findPlotModel(instance)
+	local current = instance.Parent
+	while current and current ~= workspace do
+		if current:IsA("Model") and current:GetAttribute("PlotIndex") then
+			return current
+		end
+		current = current.Parent
+	end
+	return nil
+end
+
+local function updatePrompt(prompt)
+	local kind = prompt:GetAttribute("Kind")
+	if not kind then
+		return
+	end
+	local plotModel = findPlotModel(prompt)
+	if not plotModel then
+		return
+	end
+	local owner = plotModel:GetAttribute("Owner") or 0
+	local mine = owner == player.UserId
+	if kind == "Sell" then
+		prompt.Enabled = mine
+	else
+		prompt.Enabled = (not mine) and owner ~= 0
+	end
+end
+
+local function updatePlotPrompts(plotModel)
+	for _, descendant in plotModel:GetDescendants() do
+		if descendant:IsA("ProximityPrompt") then
+			updatePrompt(descendant)
+		end
+	end
+end
+
+local function myPlotModel()
+	local plots = workspace:FindFirstChild("Plots")
+	if not plots then
+		return nil
+	end
+	for _, plotModel in plots:GetChildren() do
+		if plotModel:GetAttribute("Owner") == player.UserId then
+			return plotModel
+		end
+	end
+	return nil
+end
+
+local function clearBeam()
+	if beam then
+		beam:Destroy()
+		beam = nil
+	end
+	if beamAttachment then
+		beamAttachment:Destroy()
+		beamAttachment = nil
+	end
+end
+
+local function updateBeam()
+	clearBeam()
+	if not player:GetAttribute("Carrying") then
+		return
+	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local plotModel = myPlotModel()
+	local floor = plotModel and plotModel:FindFirstChild("Floor")
+	local target = floor and floor:FindFirstChild("DepositPoint")
+	if not root or not target then
+		return
+	end
+	beamAttachment = Instance.new("Attachment")
+	beamAttachment.Name = "CarryBeamStart"
+	beamAttachment.Parent = root
+
+	beam = Instance.new("Beam")
+	beam.Name = "CarryBeam"
+	beam.Attachment0 = beamAttachment
+	beam.Attachment1 = target
+	beam.Color = ColorSequence.new(Color3.fromRGB(90, 255, 120), Color3.fromRGB(60, 200, 255))
+	beam.Width0 = 0.9
+	beam.Width1 = 2.5
+	beam.FaceCamera = true
+	beam.LightEmission = 1
+	beam.Transparency = NumberSequence.new(0.2, 0.5)
+	beam.Segments = 1
+	beam.Parent = root
+end
+
+local function hatchTimerLoop()
+	while true do
+		task.wait(0.25)
+		local now = workspace:GetServerTimeNow()
+		for _, timer in CollectionService:GetTagged("HatchTimer") do
+			local hatchAt = timer:GetAttribute("HatchAt")
+			if hatchAt then
+				local left = hatchAt - now
+				if left > 0 then
+					timer.Text = "Hatching in " .. Util.FormatTime(left)
+				else
+					timer.Text = "Hatching..."
+				end
+			end
+		end
+	end
+end
+
+function World.Init()
+	-- Prompt filtering
+	workspace.DescendantAdded:Connect(function(descendant)
+		if descendant:IsA("ProximityPrompt") then
+			task.defer(updatePrompt, descendant)
+		end
+	end)
+	task.spawn(function()
+		local plots = workspace:WaitForChild("Plots")
+		local function hookPlot(plotModel)
+			plotModel:GetAttributeChangedSignal("Owner"):Connect(function()
+				updatePlotPrompts(plotModel)
+				updateBeam()
+			end)
+			updatePlotPrompts(plotModel)
+		end
+		for _, plotModel in plots:GetChildren() do
+			hookPlot(plotModel)
+		end
+		plots.ChildAdded:Connect(hookPlot)
+	end)
+
+	-- Carry beam
+	player:GetAttributeChangedSignal("Carrying"):Connect(updateBeam)
+	player.CharacterAdded:Connect(function()
+		beam = nil
+		beamAttachment = nil
+		task.wait(0.5)
+		updateBeam()
+	end)
+
+	task.spawn(hatchTimerLoop)
+
+	-- Bobbing Meteorlings
+	RunService.RenderStepped:Connect(function()
+		local t = os.clock()
+		for _, part in CollectionService:GetTagged("Bob") do
+			if part.Anchored then
+				local base = part:GetAttribute("BaseCF")
+				if typeof(base) == "CFrame" then
+					local phase = (base.Position.X + base.Position.Z) * 0.1
+					part.CFrame = base
+						* CFrame.new(0, math.sin(t * 2 + phase) * 0.35 + 0.35, 0)
+						* CFrame.Angles(0, math.sin(t * 0.9 + phase) * 0.4, 0)
+				end
+			end
+		end
+	end)
+end
+
+function World.SetState(_state) end
+
+return World
+]]></ProtectedString>
+						</Properties>
+					</Item>
+				</Item>
+				<Item class="LocalScript" referent="RBX03A3E60756B94C2D9D44E0E7CFA283EE">
+					<Properties>
+						<string name="Name">Main</string>
+						<ProtectedString name="Source"><![CDATA[-- Steal a Meteor: client entry point.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Remotes = require(Shared.Remotes)
+
+local Controllers = script.Parent:WaitForChild("Controllers")
+local UI = require(Controllers:WaitForChild("UI"))
+local World = require(Controllers:WaitForChild("World"))
+local Effects = require(Controllers:WaitForChild("Effects"))
+
+UI.Init()
+World.Init()
+Effects.Init(UI)
+
+Remotes.Sync.OnClientEvent:Connect(function(state)
+	UI.Update(state)
+	World.SetState(state)
+	Effects.SetState(state)
+end)
+
+Remotes.Notify.OnClientEvent:Connect(function(text, color)
+	UI.Toast(text, color)
+end)
+
+Remotes.Banner.OnClientEvent:Connect(function(data)
+	UI.Banner(data)
+end)
+]]></ProtectedString>
+					</Properties>
+				</Item>
+			</Item>
+		</Item>
+	</Item>
+	<Item class="Workspace" referent="RBX1EF633A3D68A44769094753CFB73F321">
+		<Properties>
+			<string name="Name">Workspace</string>
+			<bool name="FilteringEnabled">true</bool>
+		</Properties>
+	</Item>
+	<Item class="SoundService" referent="RBX6792B3DCBDDC4BCA951465048CB430B9">
+		<Properties>
+			<string name="Name">SoundService</string>
+			<bool name="RespectFilteringEnabled">true</bool>
+		</Properties>
+	</Item>
+</roblox>
