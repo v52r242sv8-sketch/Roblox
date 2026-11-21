@@ -496,6 +496,96 @@ function Visuals.ItemModel(item, showIncome, plain)
 	return Visuals.MeteorModel(item, showIncome, plain)
 end
 
+-- Guardians ----------------------------------------------------------------------
+
+-- A big angry zone Guardian that chases meteor thieves.
+function Visuals.GuardianModel(zone)
+	local g = zone.Guardian
+	local s = 2.4
+	local color = g.Color
+	local dark = color:Lerp(Color3.new(0, 0, 0), 0.35)
+
+	local model = Instance.new("Model")
+	model.Name = "Guardian_" .. zone.Name
+	local root = newRoot(model, {
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(3 * s, 3 * s, 3 * s),
+		Material = Enum.Material.SmoothPlastic,
+		Color = color,
+	})
+	root.CanQuery = false
+
+	-- Angry face
+	for _, side in { -1, 1 } do
+		local eye = ball(root, 0.95 * s, WHITE, nil, root.CFrame * CFrame.new(side * 0.55 * s, 0.35 * s, -1.2 * s))
+		ball(root, 0.5 * s, Color3.fromRGB(20, 10, 10), nil, eye.CFrame * CFrame.new(0, -0.05 * s, -0.28 * s))
+		attachedPart(root, {
+			Name = "Brow",
+			Size = Vector3.new(1.05 * s, 0.25 * s, 0.25 * s),
+			Color = Color3.fromRGB(30, 20, 20),
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(side * 0.55 * s, 0.95 * s, -1.25 * s) * CFrame.Angles(0, 0, side * 0.45))
+		-- Arms / claws
+		ball(root, 1.1 * s, dark, nil, root.CFrame * CFrame.new(side * 1.65 * s, -0.25 * s, -0.35 * s))
+		-- Feet
+		attachedPart(root, {
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.6 * s, 1.1 * s, 1.1 * s),
+			Color = dark,
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(side * 0.7 * s, -1.4 * s, -0.2 * s) * CFrame.Angles(0, 0, math.rad(90)))
+	end
+	-- Mouth with teeth
+	attachedPart(root, {
+		Size = Vector3.new(1.3 * s, 0.35 * s, 0.15 * s),
+		Color = Color3.fromRGB(60, 10, 20),
+		Material = Enum.Material.SmoothPlastic,
+	}, root.CFrame * CFrame.new(0, -0.4 * s, -1.42 * s))
+	for i = -1, 1 do
+		attachedPart(root, {
+			Size = Vector3.new(0.22 * s, 0.2 * s, 0.1 * s),
+			Color = WHITE,
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(i * 0.4 * s, -0.3 * s, -1.5 * s))
+	end
+	-- Spiky crest
+	for i = -1, 1 do
+		attachedPart(root, {
+			Size = Vector3.new(0.5 * s, 1 * s, 0.5 * s),
+			Color = dark,
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(i * 0.6 * s, 1.55 * s, 0.1 * s) * CFrame.Angles(0, math.rad(45), 0) * CFrame.Angles(math.rad(45), 0, 0))
+	end
+
+	local nameGui = make("BillboardGui", {
+		Name = "NameGui",
+		Size = UDim2.fromOffset(220, 50),
+		StudsOffsetWorldSpace = Vector3.new(0, 3 * s, 0),
+		LightInfluence = 0,
+		MaxDistance = 200,
+	}, root)
+	label(nameGui, {
+		Size = UDim2.fromScale(1, 1),
+		Text = "😠 " .. g.Name .. " (" .. g.Speed .. " speed)",
+		TextColor3 = Color3.fromRGB(255, 220, 200),
+	})
+	local alertGui = make("BillboardGui", {
+		Name = "AlertGui",
+		Size = UDim2.fromOffset(70, 70),
+		StudsOffsetWorldSpace = Vector3.new(0, 3 * s + 3.5, 0),
+		LightInfluence = 0,
+		AlwaysOnTop = true,
+		MaxDistance = 300,
+		Enabled = false,
+	}, root)
+	label(alertGui, {
+		Size = UDim2.fromScale(1, 1),
+		Text = "❗",
+		TextColor3 = Color3.fromRGB(255, 60, 60),
+	})
+	return model
+end
+
 -- Effects ------------------------------------------------------------------------
 
 -- Impact target: red ring + inner disc that the client shrinks as a countdown.

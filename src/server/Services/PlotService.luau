@@ -63,7 +63,7 @@ function PlotService.Assign(player)
 			plot.Owner = player
 			plotOf[player] = plot
 			plot.Model:SetAttribute("Owner", player.UserId)
-			plot.SignLabel.Text = player.DisplayName .. "'s Base"
+			plot.SignLabel.Text = player.DisplayName .. "'s Garden"
 			plot.LockedUntil = 0
 			plot.LockCooldownUntil = 0
 			PlotService.RefreshPedestals(player)
@@ -96,7 +96,7 @@ function PlotService.Release(player)
 	end
 	plot.Owner = nil
 	plot.Model:SetAttribute("Owner", 0)
-	plot.SignLabel.Text = "Empty Base"
+	plot.SignLabel.Text = "Empty Garden"
 	plot.BankLabel.Text = "💰 $0\nstep to collect"
 	plot.LockedUntil = 0
 	plot.Laser.Transparency = 1

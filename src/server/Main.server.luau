@@ -25,12 +25,13 @@ function Services.NotifyAll(text, color)
 	Remotes.Notify:FireAllClients(text, color)
 end
 
-local ORDER = { "Data", "Player", "Plot", "Meteor", "Combat", "Shop", "Event" }
+local ORDER = { "Data", "Player", "Plot", "Meteor", "Guardian", "Combat", "Shop", "Event" }
 local FILES = {
 	Data = "DataService",
 	Player = "PlayerService",
 	Plot = "PlotService",
 	Meteor = "MeteorService",
+	Guardian = "GuardianService",
 	Combat = "CombatService",
 	Shop = "ShopService",
 	Event = "EventService",

@@ -1,13 +1,13 @@
 <roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
-	<Item class="ReplicatedStorage" referent="RBXF1C8500342624521911356C8D178CA1F">
+	<Item class="ReplicatedStorage" referent="RBX3DB5DF834F8A45BEACF2C9502DC9E5A2">
 		<Properties>
 			<string name="Name">ReplicatedStorage</string>
 		</Properties>
-		<Item class="Folder" referent="RBXD8554738B16043E1B622F350BDE7E7D7">
+		<Item class="Folder" referent="RBX3EE2ECE1F1AB4776A197D09F14266D64">
 			<Properties>
 				<string name="Name">Shared</string>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX6362F2917A1B4456970FCEC1A306CCF9">
+			<Item class="ModuleScript" referent="RBX2D16B670EF494DA68D8781C48293E0D1">
 				<Properties>
 					<string name="Name">Config</string>
 					<ProtectedString name="Source"><![CDATA[-- Config: every balance number for Steal a Meteor lives here.
@@ -156,51 +156,70 @@ Config.PlotSpacing = 70
 Config.PlotCenterZ = -40
 
 -- Zones in front of the bases. Further zone = rarer meteors, higher speed needed.
+-- The meteor corridor: a long lane with tall checkered walls
+Config.LaneHalfWidth = 45
+
+-- Zones along the corridor. Further zone = rarer meteors, higher speed needed, faster Guardian.
+-- Floor/Wall are the two checker colors. GuardianSpeed: how fast its Guardian chases you
+-- (you must be faster, and carrying slows you down!).
 Config.Zones = {
 	{
 		Name = "Meadow",
 		ZMin = 70,
 		ZMax = 220,
 		Speed = 0,
-		Color = Color3.fromRGB(95, 170, 80),
-		Material = Enum.Material.Grass,
+		Floor = { Color3.fromRGB(125, 220, 75), Color3.fromRGB(105, 200, 62) },
+		Wall = { Color3.fromRGB(215, 140, 80), Color3.fromRGB(190, 118, 62) },
 		Interval = 4,
 		MaxActive = 12,
 		Weights = { Common = 70, Uncommon = 25, Rare = 5 },
+		Guardian = { Name = "Grumpy Rock", Speed = 13, Color = Color3.fromRGB(140, 130, 120) },
 	},
 	{
 		Name = "Crater Dunes",
 		ZMin = 240,
 		ZMax = 400,
 		Speed = 40,
-		Color = Color3.fromRGB(225, 190, 120),
-		Material = Enum.Material.Sand,
+		Floor = { Color3.fromRGB(245, 222, 160), Color3.fromRGB(230, 204, 138) },
+		Wall = { Color3.fromRGB(235, 195, 115), Color3.fromRGB(212, 172, 96) },
 		Interval = 6,
 		MaxActive = 8,
 		Weights = { Uncommon = 40, Rare = 40, Epic = 18, Legendary = 2 },
+		Guardian = { Name = "Dune Crab", Speed = 36, Color = Color3.fromRGB(240, 120, 60) },
 	},
 	{
 		Name = "Lava Rift",
 		ZMin = 420,
 		ZMax = 590,
 		Speed = 90,
-		Color = Color3.fromRGB(60, 45, 45),
-		Material = Enum.Material.Basalt,
+		Floor = { Color3.fromRGB(95, 62, 60), Color3.fromRGB(80, 50, 50) },
+		Wall = { Color3.fromRGB(150, 60, 45), Color3.fromRGB(122, 46, 35) },
 		Interval = 9,
 		MaxActive = 6,
 		Weights = { Epic = 45, Legendary = 40, Mythic = 13, Cosmic = 2 },
+		Guardian = { Name = "Magma Golem", Speed = 80, Color = Color3.fromRGB(255, 100, 30) },
 	},
 	{
 		Name = "Cosmic Void",
 		ZMin = 610,
 		ZMax = 800,
 		Speed = 160,
-		Color = Color3.fromRGB(35, 20, 70),
-		Material = Enum.Material.Glass,
+		Floor = { Color3.fromRGB(88, 64, 160), Color3.fromRGB(72, 50, 138) },
+		Wall = { Color3.fromRGB(120, 85, 200), Color3.fromRGB(98, 68, 175) },
 		Interval = 13,
 		MaxActive = 4,
 		Weights = { Legendary = 35, Mythic = 45, Cosmic = 18, Secret = 2 },
+		Guardian = { Name = "Void Watcher", Speed = 140, Color = Color3.fromRGB(180, 80, 255) },
 	},
+}
+
+-- Guardians: chase whoever grabs a meteor in their zone
+Config.Guardian = {
+	ReactTime = 0.9, -- seconds of "!" before the chase starts
+	CatchDistance = 5,
+	MaxChaseTime = 25,
+	EscapeDistance = 50, -- run this far past the start of the zone toward your base to escape
+	StunTime = 2.5, -- hammer bonk stuns a Guardian
 }
 
 -- Meteor behaviour
@@ -247,7 +266,7 @@ return Config
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX10FB92DFE86B418DA96FC6EFD8694D63">
+			<Item class="ModuleScript" referent="RBXBFFF7584009143B18AA401630ACEDF26">
 				<Properties>
 					<string name="Name">Remotes</string>
 					<ProtectedString name="Source"><![CDATA[-- Creates (server) or waits for (client) every remote the game uses.
@@ -308,7 +327,7 @@ return Remotes
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX1E6E10C0802F4671A527FF16C6A2CA11">
+			<Item class="ModuleScript" referent="RBXECD9ACF31C9945F38878A05963E9E021">
 				<Properties>
 					<string name="Name">Util</string>
 					<ProtectedString name="Source"><![CDATA[-- Small helpers shared by server and client.
@@ -444,7 +463,7 @@ return Util
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX47AD5EC98A0D4C518F2C6D8D008DE78D">
+			<Item class="ModuleScript" referent="RBX9C3D852EADD74B0F853F8895CE2B824F">
 				<Properties>
 					<string name="Name">Visuals</string>
 					<ProtectedString name="Source"><![CDATA[-- Visuals: builds every model in code (meteors, Meteorlings, hammer, warning circles).
@@ -945,6 +964,96 @@ function Visuals.ItemModel(item, showIncome, plain)
 	return Visuals.MeteorModel(item, showIncome, plain)
 end
 
+-- Guardians ----------------------------------------------------------------------
+
+-- A big angry zone Guardian that chases meteor thieves.
+function Visuals.GuardianModel(zone)
+	local g = zone.Guardian
+	local s = 2.4
+	local color = g.Color
+	local dark = color:Lerp(Color3.new(0, 0, 0), 0.35)
+
+	local model = Instance.new("Model")
+	model.Name = "Guardian_" .. zone.Name
+	local root = newRoot(model, {
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(3 * s, 3 * s, 3 * s),
+		Material = Enum.Material.SmoothPlastic,
+		Color = color,
+	})
+	root.CanQuery = false
+
+	-- Angry face
+	for _, side in { -1, 1 } do
+		local eye = ball(root, 0.95 * s, WHITE, nil, root.CFrame * CFrame.new(side * 0.55 * s, 0.35 * s, -1.2 * s))
+		ball(root, 0.5 * s, Color3.fromRGB(20, 10, 10), nil, eye.CFrame * CFrame.new(0, -0.05 * s, -0.28 * s))
+		attachedPart(root, {
+			Name = "Brow",
+			Size = Vector3.new(1.05 * s, 0.25 * s, 0.25 * s),
+			Color = Color3.fromRGB(30, 20, 20),
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(side * 0.55 * s, 0.95 * s, -1.25 * s) * CFrame.Angles(0, 0, side * 0.45))
+		-- Arms / claws
+		ball(root, 1.1 * s, dark, nil, root.CFrame * CFrame.new(side * 1.65 * s, -0.25 * s, -0.35 * s))
+		-- Feet
+		attachedPart(root, {
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.6 * s, 1.1 * s, 1.1 * s),
+			Color = dark,
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(side * 0.7 * s, -1.4 * s, -0.2 * s) * CFrame.Angles(0, 0, math.rad(90)))
+	end
+	-- Mouth with teeth
+	attachedPart(root, {
+		Size = Vector3.new(1.3 * s, 0.35 * s, 0.15 * s),
+		Color = Color3.fromRGB(60, 10, 20),
+		Material = Enum.Material.SmoothPlastic,
+	}, root.CFrame * CFrame.new(0, -0.4 * s, -1.42 * s))
+	for i = -1, 1 do
+		attachedPart(root, {
+			Size = Vector3.new(0.22 * s, 0.2 * s, 0.1 * s),
+			Color = WHITE,
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(i * 0.4 * s, -0.3 * s, -1.5 * s))
+	end
+	-- Spiky crest
+	for i = -1, 1 do
+		attachedPart(root, {
+			Size = Vector3.new(0.5 * s, 1 * s, 0.5 * s),
+			Color = dark,
+			Material = Enum.Material.SmoothPlastic,
+		}, root.CFrame * CFrame.new(i * 0.6 * s, 1.55 * s, 0.1 * s) * CFrame.Angles(0, math.rad(45), 0) * CFrame.Angles(math.rad(45), 0, 0))
+	end
+
+	local nameGui = make("BillboardGui", {
+		Name = "NameGui",
+		Size = UDim2.fromOffset(220, 50),
+		StudsOffsetWorldSpace = Vector3.new(0, 3 * s, 0),
+		LightInfluence = 0,
+		MaxDistance = 200,
+	}, root)
+	label(nameGui, {
+		Size = UDim2.fromScale(1, 1),
+		Text = "😠 " .. g.Name .. " (" .. g.Speed .. " speed)",
+		TextColor3 = Color3.fromRGB(255, 220, 200),
+	})
+	local alertGui = make("BillboardGui", {
+		Name = "AlertGui",
+		Size = UDim2.fromOffset(70, 70),
+		StudsOffsetWorldSpace = Vector3.new(0, 3 * s + 3.5, 0),
+		LightInfluence = 0,
+		AlwaysOnTop = true,
+		MaxDistance = 300,
+		Enabled = false,
+	}, root)
+	label(alertGui, {
+		Size = UDim2.fromScale(1, 1),
+		Text = "❗",
+		TextColor3 = Color3.fromRGB(255, 60, 60),
+	})
+	return model
+end
+
 -- Effects ------------------------------------------------------------------------
 
 -- Impact target: red ring + inner disc that the client shrinks as a countdown.
@@ -1093,15 +1202,15 @@ return Visuals
 			</Item>
 		</Item>
 	</Item>
-	<Item class="ServerScriptService" referent="RBX68E710EF30644F99986B05D484F0B913">
+	<Item class="ServerScriptService" referent="RBX3145DE7FB7A248B6AB8935EAD9EDDD37">
 		<Properties>
 			<string name="Name">ServerScriptService</string>
 		</Properties>
-		<Item class="Folder" referent="RBX2E4756F151C7435396C83F7A42EB327A">
+		<Item class="Folder" referent="RBXE53B4A42B62E497AB2F75A0717DC6323">
 			<Properties>
 				<string name="Name">Server</string>
 			</Properties>
-			<Item class="Script" referent="RBX76A3245C7F454509AF47CAE7440AD8B8">
+			<Item class="Script" referent="RBXF1F6F2117B3A4BE7976705F6859019FA">
 				<Properties>
 					<string name="Name">Main</string>
 					<ProtectedString name="Source"><![CDATA[-- Steal a Meteor: server entry point.
@@ -1131,12 +1240,13 @@ function Services.NotifyAll(text, color)
 	Remotes.Notify:FireAllClients(text, color)
 end
 
-local ORDER = { "Data", "Player", "Plot", "Meteor", "Combat", "Shop", "Event" }
+local ORDER = { "Data", "Player", "Plot", "Meteor", "Guardian", "Combat", "Shop", "Event" }
 local FILES = {
 	Data = "DataService",
 	Player = "PlayerService",
 	Plot = "PlotService",
 	Meteor = "MeteorService",
+	Guardian = "GuardianService",
 	Combat = "CombatService",
 	Shop = "ShopService",
 	Event = "EventService",
@@ -1214,19 +1324,19 @@ end)
 ]]></ProtectedString>
 				</Properties>
 			</Item>
-			<Item class="Folder" referent="RBX33CD3BAEF26E445FBCF8874816AA3E39">
+			<Item class="Folder" referent="RBXB09DC03A62424FB3A8A42353B97E2638">
 				<Properties>
 					<string name="Name">Modules</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX389BD9B5644943E7B4D0CAF0E1AB1BEF">
+				<Item class="ModuleScript" referent="RBXBD2F4B0AA62A449EAA13C27C57D98953">
 					<Properties>
 						<string name="Name">MapBuilder</string>
-						<ProtectedString name="Source"><![CDATA[-- MapBuilder: generates the whole world in code (terrain, sky, bases, zones, decor),
--- so the place works from an empty file.
+						<ProtectedString name="Source"><![CDATA[-- MapBuilder: generates the whole world in code.
+-- Bright cartoon style: checkered floors and tall checkered walls, built from parts.
 -- Layout (top view, +Z goes "forward"):
---   z = -75..-5   : row of player bases (plots)
---   z =  -5..62   : hub with the spawn and the road
---   z =  62..820  : meteor zones, each further one behind a speed gate
+--   z = -100..-5  : courtyard with 6 player gardens (bases)
+--   z =   -5..62  : hub plaza with the spawn and training dummies
+--   z =   62..820 : the meteor corridor, 4 zones, each behind a speed gate
 
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -1238,15 +1348,17 @@ local MapBuilder = {}
 
 local FONT = Enum.Font.FredokaOne
 local W = Config.MapHalfWidth
+local L = Config.LaneHalfWidth
+local WALL_HEIGHT = 40
 local terrain = workspace.Terrain
 
 local PLOT_COLORS = {
 	Color3.fromRGB(255, 110, 120),
-	Color3.fromRGB(255, 185, 80),
-	Color3.fromRGB(110, 225, 120),
-	Color3.fromRGB(90, 180, 255),
-	Color3.fromRGB(185, 120, 255),
-	Color3.fromRGB(255, 125, 210),
+	Color3.fromRGB(255, 185, 60),
+	Color3.fromRGB(90, 210, 110),
+	Color3.fromRGB(80, 170, 255),
+	Color3.fromRGB(180, 115, 255),
+	Color3.fromRGB(255, 120, 205),
 }
 
 -- Helpers -------------------------------------------------------------------------
@@ -1256,6 +1368,7 @@ local function part(props, parent)
 	p.Anchored = true
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Material = Enum.Material.SmoothPlastic
 	for key, value in props do
 		p[key] = value
 	end
@@ -1264,7 +1377,6 @@ local function part(props, parent)
 end
 
 local function deco(props, parent)
-	-- Decoration that never blocks raycasts or touches
 	props.CanQuery = false
 	props.CanTouch = false
 	return part(props, parent)
@@ -1327,20 +1439,116 @@ local function sparkleEmitter(parent, color, rate, size, speed)
 	return e
 end
 
--- Sky, light, terrain --------------------------------------------------------------
+-- Checkered floor: one base slab (top at y = 0) + every other tile in the second color.
+local function checkerFloor(x0, x1, z0, z1, colors, tile, parent, name)
+	part({
+		Name = name or "Floor",
+		Size = Vector3.new(x1 - x0, 4, z1 - z0),
+		Position = Vector3.new((x0 + x1) / 2, -2, (z0 + z1) / 2),
+		Color = colors[1],
+	}, parent)
+	local cols = math.floor((x1 - x0) / tile)
+	local rows = math.floor((z1 - z0) / tile)
+	local offsetX = ((x1 - x0) - cols * tile) / 2
+	local offsetZ = ((z1 - z0) - rows * tile) / 2
+	for cx = 0, cols - 1 do
+		for cz = 0, rows - 1 do
+			if (cx + cz) % 2 == 0 then
+				deco({
+					Name = "Tile",
+					Size = Vector3.new(tile, 0.1, tile),
+					Position = Vector3.new(x0 + offsetX + (cx + 0.5) * tile, 0.05, z0 + offsetZ + (cz + 0.5) * tile),
+					Color = colors[2],
+					CanCollide = false,
+					CastShadow = false,
+				}, parent)
+			end
+		end
+	end
+end
+
+-- Checkered wall along Z. inwardSign points to the side that faces the players.
+local function checkerWallZ(x, z0, z1, colors, parent, inwardSign)
+	local thickness = 4
+	part({
+		Name = "Wall",
+		Size = Vector3.new(thickness, WALL_HEIGHT, z1 - z0),
+		Position = Vector3.new(x, WALL_HEIGHT / 2, (z0 + z1) / 2),
+		Color = colors[1],
+	}, parent)
+	local cell = 10
+	local cols = math.floor((z1 - z0) / cell)
+	local rows = math.floor(WALL_HEIGHT / cell)
+	for c = 0, cols - 1 do
+		for r = 0, rows - 1 do
+			if (c + r) % 2 == 0 then
+				deco({
+					Name = "WallTile",
+					Size = Vector3.new(0.2, cell, cell),
+					Position = Vector3.new(x + inwardSign * (thickness / 2 + 0.05), (r + 0.5) * cell, z0 + (c + 0.5) * cell),
+					Color = colors[2],
+					CanCollide = false,
+					CastShadow = false,
+				}, parent)
+			end
+		end
+	end
+	deco({
+		Name = "WallTop",
+		Size = Vector3.new(thickness + 1, 1.2, z1 - z0),
+		Position = Vector3.new(x, WALL_HEIGHT + 0.6, (z0 + z1) / 2),
+		Color = colors[2]:Lerp(Color3.new(1, 1, 1), 0.35),
+	}, parent)
+end
+
+-- Checkered wall along X
+local function checkerWallX(z, x0, x1, colors, parent, inwardSign)
+	local thickness = 4
+	part({
+		Name = "Wall",
+		Size = Vector3.new(x1 - x0, WALL_HEIGHT, thickness),
+		Position = Vector3.new((x0 + x1) / 2, WALL_HEIGHT / 2, z),
+		Color = colors[1],
+	}, parent)
+	local cell = 10
+	local cols = math.floor((x1 - x0) / cell)
+	local rows = math.floor(WALL_HEIGHT / cell)
+	for c = 0, cols - 1 do
+		for r = 0, rows - 1 do
+			if (c + r) % 2 == 0 then
+				deco({
+					Name = "WallTile",
+					Size = Vector3.new(cell, cell, 0.2),
+					Position = Vector3.new(x0 + (c + 0.5) * cell, (r + 0.5) * cell, z + inwardSign * (thickness / 2 + 0.05)),
+					Color = colors[2],
+					CanCollide = false,
+					CastShadow = false,
+				}, parent)
+			end
+		end
+	end
+	deco({
+		Name = "WallTop",
+		Size = Vector3.new(x1 - x0, 1.2, thickness + 1),
+		Position = Vector3.new((x0 + x1) / 2, WALL_HEIGHT + 0.6, z),
+		Color = colors[2]:Lerp(Color3.new(1, 1, 1), 0.35),
+	}, parent)
+end
+
+-- Sky & light -----------------------------------------------------------------------
 
 local function setupLighting()
-	-- Bright sunny cartoon look (the style of today's top Roblox games)
-	Lighting.ClockTime = 14.3
-	Lighting.GeographicLatitude = 25
+	-- Bright sunny cartoon look
+	Lighting.ClockTime = 13.5
+	Lighting.GeographicLatitude = 20
 	Lighting.Brightness = 3
-	Lighting.Ambient = Color3.fromRGB(105, 105, 125)
-	Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 170)
+	Lighting.Ambient = Color3.fromRGB(120, 120, 135)
+	Lighting.OutdoorAmbient = Color3.fromRGB(165, 165, 180)
 	Lighting.ExposureCompensation = 0
 	Lighting.EnvironmentDiffuseScale = 1
-	Lighting.EnvironmentSpecularScale = 1
+	Lighting.EnvironmentSpecularScale = 0.6
 	Lighting.GlobalShadows = true
-	Lighting.ShadowSoftness = 0.2
+	Lighting.ShadowSoftness = 0.3
 
 	local function effect(className)
 		local existing = Lighting:FindFirstChildOfClass(className)
@@ -1358,32 +1566,30 @@ local function setupLighting()
 	end
 
 	local sky = effect("Sky")
-	sky.StarCount = 3000
 	sky.CelestialBodiesShown = true
 	sky.SunAngularSize = 14
 
 	local atmosphere = effect("Atmosphere")
-	atmosphere.Density = 0.22
+	atmosphere.Density = 0.18
 	atmosphere.Offset = 0.25
 	atmosphere.Color = Color3.fromRGB(205, 225, 255)
 	atmosphere.Decay = Color3.fromRGB(110, 130, 170)
 	atmosphere.Glare = 0
-	atmosphere.Haze = 0.4
+	atmosphere.Haze = 0.3
 
-	-- Only neon glows, nothing else gets washed out
 	local bloom = effect("BloomEffect")
-	bloom.Intensity = 0.4
+	bloom.Intensity = 0.35
 	bloom.Size = 24
 	bloom.Threshold = 1.4
 
 	local rays = effect("SunRaysEffect")
-	rays.Intensity = 0.05
+	rays.Intensity = 0.04
 	rays.Spread = 0.5
 
 	local color = effect("ColorCorrectionEffect")
-	color.Saturation = 0.18
-	color.Contrast = 0.08
-	color.Brightness = 0
+	color.Saturation = 0.2
+	color.Contrast = 0.06
+	color.Brightness = 0.02
 	color.TintColor = Color3.fromRGB(255, 255, 255)
 
 	local clouds = terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
@@ -1393,108 +1599,101 @@ local function setupLighting()
 	clouds.Parent = terrain
 end
 
-local function fill(x0, x1, z0, z1, material, depth)
-	depth = depth or 12
-	terrain:FillBlock(
-		CFrame.new((x0 + x1) / 2, -depth / 2, (z0 + z1) / 2),
-		Vector3.new(math.abs(x1 - x0), depth, math.abs(z1 - z0)),
-		material
-	)
-end
-
-local function setupTerrainColors()
-	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(95, 195, 80))
-	terrain:SetMaterialColor(Enum.Material.Sand, Color3.fromRGB(240, 205, 135))
-	terrain:SetMaterialColor(Enum.Material.Basalt, Color3.fromRGB(70, 58, 60))
-	terrain:SetMaterialColor(Enum.Material.CrackedLava, Color3.fromRGB(255, 110, 30))
-	terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(80, 55, 140))
-	terrain:SetMaterialColor(Enum.Material.Concrete, Color3.fromRGB(150, 155, 175))
-	terrain:SetMaterialColor(Enum.Material.Asphalt, Color3.fromRGB(70, 72, 88))
-	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(120, 125, 140))
-	terrain:SetMaterialColor(Enum.Material.Snow, Color3.fromRGB(225, 225, 255))
-end
-
--- Ring of mountains around the playfield so the horizon is not empty
-local function buildMountains(backZ, farZ)
-	local rng = Random.new(77)
-	local function mountain(position, radius)
-		terrain:FillBall(position, radius, Enum.Material.Rock)
-		if radius > 55 then
-			terrain:FillBall(position + Vector3.new(0, radius * 0.75, 0), radius * 0.32, Enum.Material.Snow)
-		end
-	end
-	-- Centers are pushed out by the radius so terrain never covers the playfield
-	for z = backZ - 40, farZ + 40, 55 do
-		for _, side in { -1, 1 } do
-			local radius = rng:NextNumber(45, 85)
-			mountain(Vector3.new(side * (W + radius + rng:NextNumber(4, 20)), rng:NextNumber(-20, 10), z), radius)
-		end
-	end
-	for x = -W - 60, W + 60, 55 do
-		local radius = rng:NextNumber(50, 90)
-		mountain(Vector3.new(x, rng:NextNumber(-20, 10), farZ + radius + 4), radius)
-		local backRadius = radius * 0.8
-		mountain(Vector3.new(x, rng:NextNumber(-25, 5), backZ - backRadius - 4), backRadius)
-	end
-end
-
 -- Decor pieces -----------------------------------------------------------------------
 
 local function buildTree(rng, position, parent)
-	local height = rng:NextNumber(8, 13)
+	local height = rng:NextNumber(7, 11)
 	deco({
 		Name = "Trunk",
 		Size = Vector3.new(1.8, height, 1.8),
-		CFrame = CFrame.new(position + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6), rng:NextNumber(-0.08, 0.08)),
+		Position = position + Vector3.new(0, height / 2, 0),
 		Material = Enum.Material.Wood,
-		Color = Color3.fromRGB(95, 62, 42),
-		CanQuery = true,
-	}, parent).CanQuery = true
-	local leafColor = Color3.fromRGB(55 + rng:NextInteger(0, 30), 130 + rng:NextInteger(0, 50), 70 + rng:NextInteger(0, 30))
-	for i = 1, 4 do
-		local size = rng:NextNumber(5, 8.5)
-		local offset = Vector3.new(rng:NextNumber(-2.5, 2.5), height + rng:NextNumber(-1, 3) + i * 0.4, rng:NextNumber(-2.5, 2.5))
+		Color = Color3.fromRGB(120, 78, 48),
+	}, parent).CanCollide = true
+	local leafColor = Color3.fromRGB(60 + rng:NextInteger(0, 30), 170 + rng:NextInteger(0, 40), 60)
+	for i = 1, 3 do
+		local size = rng:NextNumber(5, 8)
 		deco({
 			Name = "Leaves",
-			Shape = Enum.PartType.Ball,
-			Size = Vector3.new(size, size, size),
-			Position = position + offset,
-			Material = Enum.Material.Grass,
-			Color = leafColor:Lerp(Color3.fromRGB(150, 220, 120), rng:NextNumber(0, 0.25)),
+			Size = Vector3.new(size, size * 0.8, size),
+			CFrame = CFrame.new(position + Vector3.new(rng:NextNumber(-2, 2), height + i * 1.2, rng:NextNumber(-2, 2)))
+				* CFrame.Angles(0, rng:NextNumber(0, 6), 0),
+			Color = leafColor:Lerp(Color3.fromRGB(170, 235, 110), rng:NextNumber(0, 0.3)),
 			CanCollide = false,
 		}, parent)
 	end
 end
 
-local function buildMushroom(rng, position, parent, withLight)
-	local color = Color3.fromHSV(rng:NextNumber(0.45, 0.95), 0.6, 1)
-	local h = rng:NextNumber(1.2, 2.6)
+local function buildFlower(rng, position, parent)
+	local color = Color3.fromHSV(rng:NextNumber(), 0.6, 1)
 	deco({
 		Name = "Stem",
-		Size = Vector3.new(0.5, h, 0.5),
-		Position = position + Vector3.new(0, h / 2, 0),
-		Material = Enum.Material.SmoothPlastic,
-		Color = Color3.fromRGB(235, 230, 210),
+		Size = Vector3.new(0.25, 1.4, 0.25),
+		Position = position + Vector3.new(0, 0.7, 0),
+		Color = Color3.fromRGB(60, 150, 50),
 		CanCollide = false,
 	}, parent)
-	local cap = deco({
-		Name = "Cap",
+	deco({
+		Name = "Petals",
 		Shape = Enum.PartType.Ball,
-		Size = Vector3.new(h * 1.1, h * 1.1, h * 1.1),
-		Position = position + Vector3.new(0, h + 0.1, 0),
-		Material = Enum.Material.Neon,
+		Size = Vector3.new(1, 1, 1),
+		Position = position + Vector3.new(0, 1.5, 0),
 		Color = color,
 		CanCollide = false,
 		CastShadow = false,
 	}, parent)
-	if withLight then
-		light(cap, color, 12, 1.2)
+end
+
+local function buildBush(rng, position, parent, color)
+	for _ = 1, 3 do
+		local size = rng:NextNumber(2.5, 4)
+		deco({
+			Name = "Bush",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(size, size, size),
+			Position = position + Vector3.new(rng:NextNumber(-1.5, 1.5), size * 0.3, rng:NextNumber(-1.5, 1.5)),
+			Color = color or Color3.fromRGB(70, 175, 70),
+			CanCollide = false,
+		}, parent)
 	end
 end
 
-local function buildCrystal(rng, position, parent, color, scale, withLight)
-	local cluster = Instance.new("Model")
-	cluster.Name = "Crystal"
+local function buildCactus(rng, position, parent)
+	local h = rng:NextNumber(5, 9)
+	local green = Color3.fromRGB(70, 170, 80)
+	local trunk = deco({ Name = "Cactus", Size = Vector3.new(1.8, h, 1.8), Position = position + Vector3.new(0, h / 2, 0), Color = green }, parent)
+	trunk.CanCollide = true
+	for _, side in { -1, 1 } do
+		local armH = rng:NextNumber(1.5, 3)
+		deco({
+			Name = "Arm",
+			Size = Vector3.new(1.4, 1.2, 1.2),
+			Position = position + Vector3.new(side * 1.5, h * 0.5, 0),
+			Color = green,
+		}, parent)
+		deco({
+			Name = "Arm",
+			Size = Vector3.new(1.2, armH, 1.2),
+			Position = position + Vector3.new(side * 2.1, h * 0.5 + armH / 2, 0),
+			Color = green,
+		}, parent)
+	end
+end
+
+local function buildPyramid(position, parent, color)
+	for i = 0, 4 do
+		local size = 22 - i * 4.4
+		part({
+			Name = "Step",
+			Size = Vector3.new(size, 2.2, size),
+			Position = position + Vector3.new(0, 1.1 + i * 2.2, 0),
+			Material = Enum.Material.Sandstone,
+			Color = color,
+		}, parent)
+	end
+end
+
+local function buildCrystal(rng, position, parent, color, scale)
 	for _ = 1, rng:NextInteger(3, 5) do
 		local h = rng:NextNumber(3, 7) * scale
 		local w = h * rng:NextNumber(0.22, 0.32)
@@ -1503,42 +1702,32 @@ local function buildCrystal(rng, position, parent, color, scale, withLight)
 			Size = Vector3.new(w, h, w),
 			CFrame = CFrame.new(position + Vector3.new(rng:NextNumber(-1, 1) * scale, h * 0.35, rng:NextNumber(-1, 1) * scale))
 				* CFrame.Angles(rng:NextNumber(-0.45, 0.45), rng:NextNumber(0, 6), rng:NextNumber(-0.45, 0.45)),
-			Material = Enum.Material.Neon,
+			Material = Enum.Material.Glass,
 			Color = color:Lerp(Color3.new(1, 1, 1), rng:NextNumber(0, 0.3)),
-			Transparency = 0.1,
-			CastShadow = false,
-		}, cluster)
+			Transparency = 0.15,
+		}, parent)
 	end
-	cluster.Parent = parent
-	if withLight then
-		local anchor = cluster:FindFirstChildWhichIsA("BasePart")
-		if anchor then
-			light(anchor, color, 18 * scale, 2)
-		end
-	end
-	return cluster
 end
 
 local function buildLamp(position, parent, color)
 	deco({
 		Name = "LampPole",
-		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(10, 0.6, 0.6),
-		CFrame = CFrame.new(position + Vector3.new(0, 5, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Size = Vector3.new(0.7, 10, 0.7),
+		Position = position + Vector3.new(0, 5, 0),
 		Material = Enum.Material.Metal,
-		Color = Color3.fromRGB(40, 40, 55),
+		Color = Color3.fromRGB(60, 60, 75),
 	}, parent).CanCollide = true
 	local bulb = deco({
 		Name = "LampBulb",
 		Shape = Enum.PartType.Ball,
-		Size = Vector3.new(1.6, 1.6, 1.6),
-		Position = position + Vector3.new(0, 10.4, 0),
+		Size = Vector3.new(1.8, 1.8, 1.8),
+		Position = position + Vector3.new(0, 10.6, 0),
 		Material = Enum.Material.Neon,
 		Color = color,
 		CanCollide = false,
 		CastShadow = false,
 	}, parent)
-	light(bulb, color, 26, 1.6)
+	light(bulb, color, 18, 1)
 end
 
 -- Training dummy: test your hammer without other players -------------------------
@@ -1585,9 +1774,8 @@ local function buildDummy(position, parent)
 		Name = "Target",
 		Shape = Enum.PartType.Cylinder,
 		Size = Vector3.new(0.2, 1.8, 1.8),
-		Material = Enum.Material.SmoothPlastic,
 		Color = Color3.fromRGB(230, 60, 60),
-	}, CFrame.new(0, 4.6, -0.75) * CFrame.Angles(0, math.rad(90), 0))
+	}, CFrame.new(0, 4.6, 0.75) * CFrame.Angles(0, math.rad(90), 0))
 	piece({
 		Name = "Head",
 		Shape = Enum.PartType.Ball,
@@ -1603,13 +1791,20 @@ local function buildDummy(position, parent)
 			Color = Color3.fromRGB(220, 185, 125),
 		}, CFrame.new(side * 2.2, 5.3, 0) * CFrame.Angles(0, 0, side * 0.3))
 	end
-	local gui, text = billboard(torso, "🎯 BONK DUMMY\nequip Hammer [1] and click", UDim2.fromOffset(220, 56), Vector3.new(0, 5.5, 0), Color3.fromRGB(255, 230, 120), 80)
+	local gui, text = billboard(
+		torso,
+		"🎯 BONK DUMMY\nequip Hammer [1] and click",
+		UDim2.fromOffset(220, 56),
+		Vector3.new(0, 5.5, 0),
+		Color3.fromRGB(255, 230, 120),
+		80
+	)
 	gui.Name = "DummyGui"
 	model.Parent = parent
 	return { Model = model, Pivot = pivot, Base = pivot.CFrame, Torso = torso, Label = text, Hits = 0 }
 end
 
--- Plots ------------------------------------------------------------------------------
+-- Gardens (player bases) ---------------------------------------------------------------
 
 local function buildPlot(index, parent)
 	local cx = (index - (Config.PlotCount + 1) / 2) * Config.PlotSpacing
@@ -1617,7 +1812,7 @@ local function buildPlot(index, parent)
 	local halfX = Config.PlotSize.X / 2
 	local halfZ = Config.PlotSize.Z / 2
 	local color = PLOT_COLORS[(index - 1) % #PLOT_COLORS + 1]
-	local dark = Color3.fromRGB(30, 28, 44)
+	local rng = Random.new(index * 97)
 
 	local model = Instance.new("Model")
 	model.Name = "Plot" .. index
@@ -1625,113 +1820,100 @@ local function buildPlot(index, parent)
 	model:SetAttribute("Owner", 0)
 	model.Parent = parent
 
+	-- Lawn: checkered grass, slightly raised
 	local floor = part({
 		Name = "Floor",
 		Size = Vector3.new(Config.PlotSize.X, 0.5, Config.PlotSize.Z),
 		Position = Vector3.new(cx, 0.25, cz),
-		Material = Enum.Material.WoodPlanks,
-		Color = color:Lerp(Color3.fromRGB(70, 55, 50), 0.6),
+		Color = Color3.fromRGB(110, 210, 80),
 	}, model)
+	local tile = 10
+	for tx = 0, 5 do
+		for tz = 0, 6 do
+			if (tx + tz) % 2 == 0 then
+				deco({
+					Name = "LawnTile",
+					Size = Vector3.new(tile, 0.08, tile),
+					Position = Vector3.new(cx - halfX + (tx + 0.5) * tile, 0.54, cz - halfZ + (tz + 0.5) * tile),
+					Color = Color3.fromRGB(95, 192, 68),
+					CanCollide = false,
+					CastShadow = false,
+				}, model)
+			end
+		end
+	end
 
-	-- Neon outline around the floor
-	for _, edge in {
-		{ Vector3.new(Config.PlotSize.X, 0.25, 0.6), Vector3.new(cx, 0.6, cz + halfZ - 0.3) },
-		{ Vector3.new(Config.PlotSize.X, 0.25, 0.6), Vector3.new(cx, 0.6, cz - halfZ + 0.3) },
-		{ Vector3.new(0.6, 0.25, Config.PlotSize.Z), Vector3.new(cx - halfX + 0.3, 0.6, cz) },
-		{ Vector3.new(0.6, 0.25, Config.PlotSize.Z), Vector3.new(cx + halfX - 0.3, 0.6, cz) },
-	} do
+	-- Stone path from the gate to the Speed Pad
+	for z = cz - halfZ + 10, cz + halfZ - 2, 4 do
 		deco({
-			Name = "Trim",
-			Size = edge[1],
-			Position = edge[2],
-			Material = Enum.Material.Neon,
-			Color = color,
+			Name = "PathStone",
+			Size = Vector3.new(5.5, 0.15, 3.4),
+			Position = Vector3.new(cx, 0.6, z),
+			Material = Enum.Material.Slate,
+			Color = Color3.fromRGB(215, 210, 200),
 			CanCollide = false,
-			CastShadow = false,
 		}, model)
 	end
 
-	-- Walls: back + sides, with neon caps and corner pillars
-	part({
-		Name = "BackWall",
-		Size = Vector3.new(Config.PlotSize.X, 10, 1.4),
-		Position = Vector3.new(cx, 5, cz - halfZ),
-		Material = Enum.Material.Brick,
-		Color = color:Lerp(dark, 0.55),
-	}, model)
-	deco({
-		Name = "WallCap",
-		Size = Vector3.new(Config.PlotSize.X, 0.5, 1.8),
-		Position = Vector3.new(cx, 10.2, cz - halfZ),
-		Material = Enum.Material.Neon,
-		Color = color,
-		CastShadow = false,
-	}, model)
+	-- White picket fence (back + sides)
+	local fenceColor = Color3.fromRGB(250, 250, 250)
+	local function rail(size, position)
+		part({ Name = "FenceRail", Size = size, Position = position, Color = fenceColor }, model)
+	end
+	local function post(position)
+		deco({
+			Name = "FencePost",
+			Size = Vector3.new(0.6, 4.2, 0.6),
+			Position = position + Vector3.new(0, 2.1, 0),
+			Color = fenceColor,
+		}, model)
+	end
+	rail(Vector3.new(Config.PlotSize.X, 0.5, 0.4), Vector3.new(cx, 1.6, cz - halfZ))
+	rail(Vector3.new(Config.PlotSize.X, 0.5, 0.4), Vector3.new(cx, 3, cz - halfZ))
+	for x = -halfX, halfX, 3 do
+		post(Vector3.new(cx + x, 0.5, cz - halfZ))
+	end
+	for _, side in { -1, 1 } do
+		rail(Vector3.new(0.4, 0.5, Config.PlotSize.Z), Vector3.new(cx + side * halfX, 1.6, cz))
+		rail(Vector3.new(0.4, 0.5, Config.PlotSize.Z), Vector3.new(cx + side * halfX, 3, cz))
+		for z = -halfZ, halfZ - 3, 3 do
+			post(Vector3.new(cx + side * halfX, 0.5, cz + z))
+		end
+		-- Flowers and bushes along the fence
+		for z = -halfZ + 6, halfZ - 14, 9 do
+			buildFlower(rng, Vector3.new(cx + side * (halfX - 1.8), 0.5, cz + z), model)
+		end
+		buildBush(rng, Vector3.new(cx + side * (halfX - 3), 0.5, cz - halfZ + 3), model)
+	end
+
+	-- Entrance arch with the owner sign
+	local wood = Color3.fromRGB(150, 100, 60)
 	for _, side in { -1, 1 } do
 		part({
-			Name = "SideWall",
-			Size = Vector3.new(1.4, 6, Config.PlotSize.Z),
-			Position = Vector3.new(cx + side * halfX, 3, cz),
-			Material = Enum.Material.Brick,
-			Color = color:Lerp(dark, 0.55),
+			Name = "ArchPost",
+			Size = Vector3.new(2, 14, 2),
+			Position = Vector3.new(cx + side * 9, 7, cz + halfZ),
+			Material = Enum.Material.Wood,
+			Color = wood,
 		}, model)
-		deco({
-			Name = "WallCap",
-			Size = Vector3.new(1.8, 0.4, Config.PlotSize.Z),
-			Position = Vector3.new(cx + side * halfX, 6.2, cz),
-			Material = Enum.Material.Neon,
-			Color = color,
-			CastShadow = false,
-		}, model)
-		-- Gate pillars at the open front
-		local pillar = part({
-			Name = "Pillar",
-			Size = Vector3.new(2.6, 12, 2.6),
-			Position = Vector3.new(cx + side * (halfX - 0.5), 6, cz + halfZ),
-			Material = Enum.Material.Marble,
-			Color = Color3.fromRGB(235, 235, 245),
-		}, model)
-		local orb = deco({
-			Name = "PillarOrb",
-			Shape = Enum.PartType.Ball,
-			Size = Vector3.new(2.2, 2.2, 2.2),
-			Position = pillar.Position + Vector3.new(0, 7.2, 0),
-			Material = Enum.Material.Neon,
-			Color = color,
-			CanCollide = false,
-			CastShadow = false,
-		}, model)
-		light(orb, color, 22, 1.8)
 	end
-
-	local laser = deco({
-		Name = "Laser",
-		Size = Vector3.new(Config.PlotSize.X - 3, 9, 0.35),
-		Position = Vector3.new(cx, 4.5, cz + halfZ),
-		Material = Enum.Material.ForceField,
-		Color = Color3.fromRGB(255, 40, 70),
-		Transparency = 1,
-		CanCollide = false,
-		CastShadow = false,
-	}, model)
-
-	-- Owner sign floating above the back wall
-	local signPart = deco({
+	local signPart = part({
 		Name = "Sign",
-		Size = Vector3.new(24, 5, 0.8),
-		Position = Vector3.new(cx, 14.5, cz - halfZ),
-		Material = Enum.Material.SmoothPlastic,
-		Color = dark,
-		CanCollide = false,
-	}, model)
-	deco({
-		Name = "SignFrame",
-		Size = Vector3.new(25, 6, 0.5),
-		Position = signPart.Position - Vector3.new(0, 0, 0.3),
-		Material = Enum.Material.Neon,
+		Size = Vector3.new(22, 4.5, 1),
+		Position = Vector3.new(cx, 14.5, cz + halfZ),
+		Material = Enum.Material.Wood,
 		Color = color,
 		CanCollide = false,
-		CastShadow = false,
+	}, model)
+	-- The Front face points to -Z by default; turn it toward the plaza (+Z)
+	signPart.CFrame = CFrame.lookAt(signPart.Position, signPart.Position + Vector3.new(0, 0, 1))
+	deco({
+		Name = "SignFrame",
+		Size = Vector3.new(23.5, 5.6, 0.8),
+		Position = signPart.Position - Vector3.new(0, 0, 0.3),
+		Material = Enum.Material.Wood,
+		Color = wood,
+		CanCollide = false,
 	}, model)
 	local signGui = Instance.new("SurfaceGui")
 	signGui.Face = Enum.NormalId.Front
@@ -1744,16 +1926,25 @@ local function buildPlot(index, parent)
 	signLabel.BackgroundTransparency = 1
 	signLabel.Font = FONT
 	signLabel.TextScaled = true
-	signLabel.Text = "Empty Base"
+	signLabel.Text = "Empty Garden"
 	signLabel.TextColor3 = Color3.new(1, 1, 1)
 	signLabel.TextStrokeTransparency = 0
 	signLabel.Parent = signGui
-	-- The front face of a part points to -Z; the sign must face the playfield (+Z)
-	signPart.CFrame = CFrame.lookAt(signPart.Position, signPart.Position + Vector3.new(0, 0, 1))
 
-	-- Pedestals: 4 columns x 4 rows, filled from the back row
+	local laser = deco({
+		Name = "Laser",
+		Size = Vector3.new(Config.PlotSize.X - 1, 9, 0.35),
+		Position = Vector3.new(cx, 4.5, cz + halfZ),
+		Material = Enum.Material.ForceField,
+		Color = Color3.fromRGB(255, 40, 70),
+		Transparency = 1,
+		CanCollide = false,
+		CastShadow = false,
+	}, model)
+
+	-- Pedestals: 4 columns x 4 rows on both sides of the path, filled from the back
 	local pedestals = {}
-	local cols = { -21, -7, 7, 21 }
+	local cols = { -21, -10, 10, 21 }
 	local rows = { -20, -7, 6, 19 }
 	local n = 0
 	for _, rz in rows do
@@ -1762,22 +1953,22 @@ local function buildPlot(index, parent)
 			local base = Vector3.new(cx + rx, 0.5, cz + rz)
 			flatCylinder({
 				Name = "PedestalBase",
-				Size = Vector3.new(0.5, 7.6, 7.6),
+				Size = Vector3.new(0.5, 7.4, 7.4),
 				Position = base + Vector3.new(0, 0.25, 0),
-				Material = Enum.Material.Marble,
-				Color = Color3.fromRGB(200, 200, 215),
+				Material = Enum.Material.Slate,
+				Color = Color3.fromRGB(200, 195, 185),
 			}, model)
 			local pedestal = flatCylinder({
 				Name = "Pedestal" .. n,
-				Size = Vector3.new(1.2, 6.4, 6.4),
+				Size = Vector3.new(1.2, 6.2, 6.2),
 				Position = base + Vector3.new(0, 0.6, 0),
 				Material = Enum.Material.Marble,
-				Color = Color3.fromRGB(240, 240, 248),
+				Color = Color3.fromRGB(245, 245, 250),
 			}, model)
 			pedestal:SetAttribute("Slot", n)
 			local ring = flatCylinder({
 				Name = "Ring",
-				Size = Vector3.new(0.15, 6.9, 6.9),
+				Size = Vector3.new(0.15, 6.7, 6.7),
 				Position = base + Vector3.new(0, 1.15, 0),
 				Material = Enum.Material.Neon,
 				Color = color,
@@ -1790,7 +1981,7 @@ local function buildPlot(index, parent)
 				"🔒 Buy in Shop",
 				UDim2.fromOffset(130, 30),
 				Vector3.new(0, 2.2, 0),
-				Color3.fromRGB(210, 210, 220),
+				Color3.fromRGB(230, 230, 240),
 				70
 			)
 			lockGui.Name = "LockGui"
@@ -1799,29 +1990,26 @@ local function buildPlot(index, parent)
 		end
 	end
 
-	-- Speed pad: "+speed every second"
+	-- Speed pad (back of the garden)
 	local speedPad = part({
 		Name = "SpeedPad",
 		Size = Vector3.new(22, 0.3, 8),
 		Position = Vector3.new(cx, 0.65, cz - halfZ + 5.6),
-		Material = Enum.Material.SmoothPlastic,
-		Color = Color3.fromRGB(50, 190, 255),
+		Color = Color3.fromRGB(60, 190, 255),
 		CanCollide = false,
-		CastShadow = false,
 	}, model)
 	for i = -2, 2 do
 		deco({
 			Name = "Chevron",
 			Size = Vector3.new(1, 0.35, 5),
-			CFrame = CFrame.new(cx + i * 4, 0.7, cz - halfZ + 5.6) * CFrame.Angles(0, math.rad(45), 0),
+			CFrame = CFrame.new(cx + i * 4, 0.72, cz - halfZ + 5.6) * CFrame.Angles(0, math.rad(45), 0),
 			Material = Enum.Material.Neon,
-			Color = Color3.fromRGB(200, 245, 255),
+			Color = Color3.fromRGB(220, 250, 255),
 			CanCollide = false,
 			CastShadow = false,
 		}, model)
 	end
-	sparkleEmitter(speedPad, Color3.fromRGB(120, 220, 255), 12, 0.5, 4)
-	light(speedPad, Color3.fromRGB(80, 200, 255), 16, 1.5)
+	sparkleEmitter(speedPad, Color3.fromRGB(120, 220, 255), 10, 0.5, 4)
 	billboard(
 		speedPad,
 		"⚡ SPEED PAD ⚡\n+speed every second",
@@ -1836,19 +2024,16 @@ local function buildPlot(index, parent)
 		Name = "CollectPad",
 		Size = Vector3.new(11, 0.3, 8),
 		Position = Vector3.new(cx - 17, 0.65, cz + halfZ - 6),
-		Material = Enum.Material.SmoothPlastic,
-		Color = Color3.fromRGB(70, 225, 100),
+		Color = Color3.fromRGB(80, 225, 100),
 		CanCollide = false,
-		CastShadow = false,
 	}, model)
 	sparkleEmitter(collectPad, Color3.fromRGB(255, 225, 90), 6, 0.6, 3)
-	light(collectPad, Color3.fromRGB(90, 255, 120), 14, 1.3)
 	local _, bankLabel = billboard(
 		collectPad,
 		"💰 $0\nstep to collect",
 		UDim2.fromOffset(200, 64),
 		Vector3.new(0, 3.4, 0),
-		Color3.fromRGB(180, 255, 180),
+		Color3.fromRGB(190, 255, 190),
 		110
 	)
 
@@ -1857,18 +2042,15 @@ local function buildPlot(index, parent)
 		Name = "LockPad",
 		Size = Vector3.new(9, 0.3, 8),
 		Position = Vector3.new(cx + 18, 0.65, cz + halfZ - 6),
-		Material = Enum.Material.SmoothPlastic,
-		Color = Color3.fromRGB(255, 60, 80),
+		Color = Color3.fromRGB(255, 70, 90),
 		CanCollide = false,
-		CastShadow = false,
 	}, model)
-	light(lockPad, Color3.fromRGB(255, 70, 90), 12, 1.2)
 	local _, lockLabel = billboard(
 		lockPad,
 		"🔒 LOCK BASE",
 		UDim2.fromOffset(170, 40),
 		Vector3.new(0, 3.2, 0),
-		Color3.fromRGB(255, 190, 190),
+		Color3.fromRGB(255, 200, 200),
 		110
 	)
 
@@ -1909,7 +2091,7 @@ local function buildPlot(index, parent)
 	}
 end
 
--- Zones ----------------------------------------------------------------------------
+-- Corridor zones ---------------------------------------------------------------------
 
 local ZONE_GLOW = {
 	Color3.fromRGB(120, 255, 140),
@@ -1923,8 +2105,8 @@ local function buildGate(zoneIndex, zone, parent)
 	local glow = ZONE_GLOW[zoneIndex] or Color3.fromRGB(80, 200, 255)
 	deco({
 		Name = "Gate_" .. zone.Name,
-		Size = Vector3.new(W * 2, 18, 0.5),
-		Position = Vector3.new(0, 9, gateZ),
+		Size = Vector3.new(L * 2, 22, 0.5),
+		Position = Vector3.new(0, 11, gateZ),
 		Material = Enum.Material.ForceField,
 		Color = glow,
 		Transparency = 0.1,
@@ -1933,185 +2115,133 @@ local function buildGate(zoneIndex, zone, parent)
 	}, parent)
 	deco({
 		Name = "GateLine",
-		Size = Vector3.new(W * 2, 0.3, 1.2),
+		Size = Vector3.new(L * 2, 0.3, 1.5),
 		Position = Vector3.new(0, 0.15, gateZ),
 		Material = Enum.Material.Neon,
 		Color = glow,
 		CanCollide = false,
 		CastShadow = false,
 	}, parent)
-	for _, x in { -150, -50, 50, 150 } do
-		local pylon = part({
-			Name = "GatePylon",
-			Size = Vector3.new(3, 22, 3),
-			Position = Vector3.new(x, 11, gateZ),
-			Material = Enum.Material.Metal,
-			Color = Color3.fromRGB(45, 45, 60),
-		}, parent)
-		local top = deco({
-			Name = "PylonTop",
-			Shape = Enum.PartType.Ball,
-			Size = Vector3.new(3.4, 3.4, 3.4),
-			Position = pylon.Position + Vector3.new(0, 12.5, 0),
-			Material = Enum.Material.Neon,
-			Color = glow,
-			CanCollide = false,
-			CastShadow = false,
-		}, parent)
-		light(top, glow, 30, 2)
+	deco({
+		Name = "GateBeam",
+		Size = Vector3.new(L * 2 + 8, 4, 4),
+		Position = Vector3.new(0, 26, gateZ),
+		Color = glow:Lerp(Color3.new(1, 1, 1), 0.2),
+	}, parent)
+	local anchor = deco({
+		Name = "GateSign",
+		Size = Vector3.new(1, 1, 1),
+		Position = Vector3.new(0, 33, gateZ),
+		Transparency = 1,
+		CanCollide = false,
+	}, parent)
+	billboard(
+		anchor,
+		"⚡ " .. zone.Speed .. " SPEED ⚡\n" .. string.upper(zone.Name) .. " • Guardian: " .. zone.Guardian.Speed .. " speed",
+		UDim2.fromOffset(440, 110),
+		Vector3.new(0, 0, 0),
+		glow,
+		500
+	)
+end
+
+local function nearWall(rng)
+	local side = 1
+	if rng:NextNumber() < 0.5 then
+		side = -1
 	end
-	for _, x in { -100, 100 } do
-		local anchor = deco({
-			Name = "GateSign",
-			Size = Vector3.new(1, 1, 1),
-			Position = Vector3.new(x, 22, gateZ),
-			Transparency = 1,
-			CanCollide = false,
-		}, parent)
-		billboard(
-			anchor,
-			"⚡ " .. zone.Speed .. " SPEED ⚡\n" .. string.upper(zone.Name),
-			UDim2.new(30, 0, 8, 0),
-			Vector3.new(0, 0, 0),
-			glow,
-			450
-		)
-	end
+	return side * rng:NextNumber(L - 9, L - 4)
 end
 
 local function decorateZone(zoneIndex, zone, rng, parent, info)
 	local zMin = zone.ZMin
 	local zMax = zone.ZMax
-	local function randomX(margin)
-		return rng:NextNumber(-W + margin, W - margin)
-	end
 	if zoneIndex == 1 then
-		for _ = 1, 18 do
-			buildTree(rng, Vector3.new(randomX(10), 0, rng:NextNumber(zMin, zMax)), parent)
+		for _ = 1, 14 do
+			buildTree(rng, Vector3.new(nearWall(rng), 0, rng:NextNumber(zMin, zMax)), parent)
 		end
-		for i = 1, 40 do
-			buildMushroom(rng, Vector3.new(randomX(6), 0, rng:NextNumber(zMin - 5, zMax)), parent, i % 4 == 0)
+		for _ = 1, 30 do
+			buildFlower(rng, Vector3.new(nearWall(rng), 0, rng:NextNumber(zMin - 5, zMax)), parent)
 		end
-		for _ = 1, 10 do
-			local size = rng:NextNumber(3, 6)
-			deco({
-				Name = "Boulder",
-				Shape = Enum.PartType.Ball,
-				Size = Vector3.new(size, size, size),
-				Position = Vector3.new(randomX(10), size * 0.15, rng:NextNumber(zMin, zMax)),
-				Material = Enum.Material.Slate,
-				Color = Color3.fromRGB(110, 110, 125),
-			}, parent).CanCollide = true
+		for _ = 1, 8 do
+			buildBush(rng, Vector3.new(nearWall(rng), 0, rng:NextNumber(zMin, zMax)), parent)
 		end
 	elseif zoneIndex == 2 then
-		for _ = 1, 14 do
-			local size = rng:NextNumber(4, 10)
-			deco({
-				Name = "Rock",
-				Shape = Enum.PartType.Ball,
-				Size = Vector3.new(size, size, size),
-				Position = Vector3.new(randomX(10), size * 0.1, rng:NextNumber(zMin, zMax)),
-				Material = Enum.Material.Sandstone,
-				Color = Color3.fromRGB(175, 130, 90),
-			}, parent).CanCollide = true
+		buildPyramid(Vector3.new(-L + 14, 0, zMin + 40), parent, zone.Wall[1])
+		buildPyramid(Vector3.new(L - 14, 0, zMax - 40), parent, zone.Wall[2])
+		for _ = 1, 12 do
+			buildCactus(rng, Vector3.new(nearWall(rng), 0, rng:NextNumber(zMin, zMax)), parent)
 		end
-		for i = 1, 12 do
-			local position = Vector3.new(randomX(15), 0, rng:NextNumber(zMin, zMax))
-			terrain:FillCylinder(CFrame.new(position - Vector3.new(0, 1.5, 0)), 3, rng:NextNumber(8, 13), Enum.Material.Basalt)
-			buildCrystal(rng, position, parent, Color3.fromRGB(255, 190, 80):Lerp(Color3.fromRGB(80, 200, 255), rng:NextNumber()), 0.8, i % 3 == 0)
+		for _ = 1, 6 do
+			buildCrystal(rng, Vector3.new(nearWall(rng), 0, rng:NextNumber(zMin, zMax)), parent, Color3.fromRGB(255, 190, 80), 0.9)
 		end
 	elseif zoneIndex == 3 then
-		for _ = 1, 12 do
-			local d = rng:NextNumber(14, 26)
-			local pos = Vector3.new(randomX(20), 0.15, rng:NextNumber(zMin + 15, zMax - 10))
-			terrain:FillCylinder(CFrame.new(pos - Vector3.new(0, 1.8, 0)), 3.5, d / 2 + 4, Enum.Material.CrackedLava)
+		for _ = 1, 9 do
+			local d = rng:NextNumber(12, 18)
+			local pos = Vector3.new(rng:NextNumber(-L + 12, L - 12), 0.12, rng:NextNumber(zMin + 15, zMax - 10))
 			local pool = flatCylinder({
 				Name = "Lava",
-				Size = Vector3.new(0.3, d, d),
+				Size = Vector3.new(0.25, d, d),
 				Position = pos,
 				Material = Enum.Material.Neon,
-				Color = Color3.fromRGB(255, 100, 20),
+				Color = Color3.fromRGB(255, 110, 20),
 				CanCollide = false,
 				CanQuery = false,
 				CastShadow = false,
 			}, parent)
-			light(pool, Color3.fromRGB(255, 120, 30), d * 1.2, 2.5)
-			local embers = sparkleEmitter(pool, Color3.fromRGB(255, 140, 40), 6, 0.5, 5)
+			local embers = sparkleEmitter(pool, Color3.fromRGB(255, 150, 40), 6, 0.5, 5)
 			embers.EmissionDirection = Enum.NormalId.Right
 			table.insert(info.LavaPools, { Position = pos, Radius = d / 2 })
 		end
-		for _ = 1, 22 do
-			local h = rng:NextNumber(6, 16)
+		for _ = 1, 16 do
+			local h = rng:NextNumber(6, 14)
 			deco({
 				Name = "Spike",
 				Size = Vector3.new(3.5, h, 3.5),
-				CFrame = CFrame.new(randomX(10), h / 2 - 1.5, rng:NextNumber(zMin, zMax))
-					* CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, 6), rng:NextNumber(-0.3, 0.3)),
+				CFrame = CFrame.new(nearWall(rng), h / 2 - 1.5, rng:NextNumber(zMin, zMax))
+					* CFrame.Angles(rng:NextNumber(-0.25, 0.25), rng:NextNumber(0, 6), rng:NextNumber(-0.25, 0.25)),
 				Material = Enum.Material.Basalt,
-				Color = Color3.fromRGB(40, 32, 34),
+				Color = Color3.fromRGB(60, 45, 45),
 			}, parent).CanCollide = true
 		end
 	elseif zoneIndex == 4 then
-		for z = zMin, zMax, 30 do
-			deco({
-				Name = "GridLine",
-				Size = Vector3.new(W * 2, 0.12, 0.45),
-				Position = Vector3.new(0, 0.06, z),
-				Material = Enum.Material.Neon,
-				Color = Color3.fromRGB(150, 80, 255),
-				CanCollide = false,
-				CastShadow = false,
-			}, parent)
+		for _ = 1, 12 do
+			buildCrystal(rng, Vector3.new(nearWall(rng), 0, rng:NextNumber(zMin, zMax)), parent, Color3.fromRGB(200, 120, 255), 1.5)
 		end
-		for x = -W, W, 30 do
-			deco({
-				Name = "GridLine",
-				Size = Vector3.new(0.45, 0.12, zMax - zMin + 20),
-				Position = Vector3.new(x, 0.06, (zMin + zMax) / 2),
-				Material = Enum.Material.Neon,
-				Color = Color3.fromRGB(110, 60, 220),
-				CanCollide = false,
-				CastShadow = false,
-			}, parent)
-		end
-		for i = 1, 14 do
-			buildCrystal(rng, Vector3.new(randomX(12), 0, rng:NextNumber(zMin, zMax)), parent, Color3.fromRGB(180, 90, 255), 1.6, i % 2 == 0)
-		end
-		for _ = 1, 24 do
-			local size = rng:NextNumber(3, 10)
+		for _ = 1, 16 do
+			local size = rng:NextNumber(3, 8)
 			deco({
 				Name = "Orb",
 				Shape = Enum.PartType.Ball,
 				Size = Vector3.new(size, size, size),
-				Position = Vector3.new(rng:NextNumber(-W, W), rng:NextNumber(35, 90), rng:NextNumber(zMin, zMax)),
+				Position = Vector3.new(rng:NextNumber(-L, L), rng:NextNumber(45, 80), rng:NextNumber(zMin, zMax)),
 				Material = Enum.Material.Neon,
-				Color = Color3.fromHSV(rng:NextNumber(0.7, 0.92), 0.65, 1),
+				Color = Color3.fromHSV(rng:NextNumber(0.7, 0.92), 0.6, 1),
 				CanCollide = false,
 				CastShadow = false,
 			}, parent)
 		end
 		local midZ = (zMin + zMax) / 2
-		for i, x in { -130, 0, 130 } do
-			local center = Vector3.new(x, 2.5, midZ + (i - 2) * 40)
+		for i, offset in { -65, 0, 65 } do
+			local center = Vector3.new(0, 2.5, midZ + offset)
 			local bar = deco({
 				Name = "Sweeper",
-				Size = Vector3.new(70, 2, 2),
+				Size = Vector3.new(56, 2, 2),
 				CFrame = CFrame.new(center),
 				Material = Enum.Material.Neon,
-				Color = Color3.fromRGB(255, 50, 200),
+				Color = Color3.fromRGB(255, 60, 200),
 				CanCollide = false,
 				CastShadow = false,
 			}, parent)
-			light(bar, Color3.fromRGB(255, 60, 200), 20, 1.5)
 			deco({
 				Name = "SweeperHub",
 				Shape = Enum.PartType.Cylinder,
 				Size = Vector3.new(5, 6, 6),
 				CFrame = CFrame.new(center - Vector3.new(0, 1, 0)) * CFrame.Angles(0, 0, math.rad(90)),
 				Material = Enum.Material.Metal,
-				Color = Color3.fromRGB(60, 60, 80),
+				Color = Color3.fromRGB(70, 70, 90),
 			}, parent).CanCollide = true
-			table.insert(info.Sweepers, { Part = bar, Center = center, Speed = 0.9 + i * 0.25, Angle = i })
+			table.insert(info.Sweepers, { Part = bar, Center = center, Speed = 0.8 + i * 0.25, Angle = i })
 		end
 	end
 end
@@ -2120,7 +2250,6 @@ end
 
 function MapBuilder.Build()
 	setupLighting()
-	setupTerrainColors()
 
 	local mapFolder = Instance.new("Folder")
 	mapFolder.Name = "Map"
@@ -2141,6 +2270,8 @@ function MapBuilder.Build()
 		Zones = {},
 		LavaPools = {},
 		Sweepers = {},
+		Dummies = {},
+		Lane = L,
 	}
 
 	local baseplate = workspace:FindFirstChild("Baseplate")
@@ -2148,102 +2279,85 @@ function MapBuilder.Build()
 		baseplate:Destroy()
 	end
 
-	local firstZ = Config.Zones[1].ZMin - 8
+	local corridorStart = Config.Zones[1].ZMin - 8
 	local backZ = Config.PlotCenterZ - Config.PlotSize.Z / 2 - 25
+	local wallColors = { Color3.fromRGB(150, 205, 255), Color3.fromRGB(125, 185, 245) }
 
-	-- Rocky apron outside the playfield so there is no void between the field and the mountains
-	local farGuess = Config.Zones[#Config.Zones].ZMax + 20
-	fill(-W - 260, W + 260, backZ - 220, farGuess + 220, Enum.Material.Rock, 16)
-
-	-- Base area + road (terrain, top surface at y = 0)
-	fill(-W, W, backZ, firstZ, Enum.Material.Concrete)
-	fill(-W, W, 4, 42, Enum.Material.Asphalt)
-	for x = -W + 20, W - 20, 40 do
+	-- Courtyard (gardens) + hub plaza
+	local yard = Instance.new("Folder")
+	yard.Name = "Courtyard"
+	yard.Parent = mapFolder
+	checkerFloor(-W, W, backZ, -5, { Color3.fromRGB(135, 225, 95), Color3.fromRGB(118, 208, 82) }, 12, yard, "YardFloor")
+	checkerFloor(-W, W, -5, corridorStart, { Color3.fromRGB(235, 235, 245), Color3.fromRGB(212, 214, 230) }, 12, yard, "Plaza")
+	for z = 10, corridorStart, 5 do
 		deco({
-			Name = "RoadStripe",
-			Size = Vector3.new(14, 0.1, 0.8),
-			Position = Vector3.new(x, 0.05, 23),
-			Material = Enum.Material.Neon,
-			Color = Color3.fromRGB(255, 220, 120),
+			Name = "PathStone",
+			Size = Vector3.new(10, 0.12, 3.5),
+			Position = Vector3.new(0, 0.06, z),
+			Material = Enum.Material.Slate,
+			Color = Color3.fromRGB(190, 185, 175),
 			CanCollide = false,
-			CastShadow = false,
-		}, mapFolder)
+		}, yard)
 	end
+	checkerWallX(backZ, -W, W, wallColors, yard, 1)
+	checkerWallZ(-W, backZ, corridorStart, wallColors, yard, 1)
+	checkerWallZ(W, backZ, corridorStart, wallColors, yard, -1)
+	checkerWallX(corridorStart, -W, -L - 4, wallColors, yard, -1)
+	checkerWallX(corridorStart, L + 4, W, wallColors, yard, -1)
 	for x = -W + 35, W - 35, 70 do
-		buildLamp(Vector3.new(x, 0, 2), mapFolder, Color3.fromRGB(255, 215, 150))
-		buildLamp(Vector3.new(x, 0, 46), mapFolder, Color3.fromRGB(150, 210, 255))
+		buildLamp(Vector3.new(x, 0, 2), yard, Color3.fromRGB(255, 225, 150))
+	end
+	local rng = Random.new(1337)
+	for _ = 1, 14 do
+		local x = rng:NextNumber(-W + 8, W - 8)
+		if math.abs(x) > 40 then
+			buildBush(rng, Vector3.new(x, 0, rng:NextNumber(48, corridorStart - 4)), yard)
+		end
 	end
 
-	-- Zones
-	local rng = Random.new(1337)
-	local startZ = firstZ
+	-- Corridor entrance beam
+	deco({
+		Name = "EntranceBeam",
+		Size = Vector3.new(L * 2 + 10, 5, 5),
+		Position = Vector3.new(0, WALL_HEIGHT - 2, corridorStart),
+		Color = Color3.fromRGB(255, 210, 80),
+	}, mapFolder)
+
+	-- Corridor zones
+	local startZ = corridorStart
 	for zoneIndex, zone in Config.Zones do
 		local endZ = zone.ZMax + 10
 		if zoneIndex == #Config.Zones then
 			endZ = zone.ZMax + 20
 		end
-		local material = zone.Material
-		if zone.Material == Enum.Material.Glass then
-			material = Enum.Material.Slate
-		end
-		fill(-W, W, startZ, endZ, material)
+		local folder = Instance.new("Folder")
+		folder.Name = "Zone_" .. zone.Name
+		folder.Parent = mapFolder
+
+		checkerFloor(-L, L, startZ, endZ, zone.Floor, 10, folder, "Floor_" .. zone.Name)
+		checkerWallZ(-L - 2, startZ, endZ, zone.Wall, folder, 1)
+		checkerWallZ(L + 2, startZ, endZ, zone.Wall, folder, -1)
 
 		local zoneInfo = { Zone = zone, GateZ = nil }
 		if zone.Speed > 0 then
-			buildGate(zoneIndex, zone, mapFolder)
+			buildGate(zoneIndex, zone, folder)
 			zoneInfo.GateZ = zone.ZMin - 10
 		end
 		info.Zones[zoneIndex] = zoneInfo
-
-		local decor = Instance.new("Folder")
-		decor.Name = "Decor_" .. zone.Name
-		decor.Parent = mapFolder
-		decorateZone(zoneIndex, zone, rng, decor, info)
+		decorateZone(zoneIndex, zone, rng, folder, info)
 
 		local signAnchor = deco({
 			Name = "ZoneSign",
 			Size = Vector3.new(1, 1, 1),
-			Position = Vector3.new(0, 34, zone.ZMin + 6),
+			Position = Vector3.new(0, 18, zone.ZMin + 12),
 			Transparency = 1,
 			CanCollide = false,
-		}, mapFolder)
-		billboard(
-			signAnchor,
-			string.upper(zone.Name),
-			UDim2.new(46, 0, 8, 0),
-			Vector3.new(0, 0, 0),
-			ZONE_GLOW[zoneIndex] or Color3.new(1, 1, 1),
-			500
-		)
-
+		}, folder)
+		billboard(signAnchor, string.upper(zone.Name), UDim2.fromOffset(360, 70), Vector3.new(0, 0, 0), ZONE_GLOW[zoneIndex] or Color3.new(1, 1, 1), 300)
 		startZ = endZ
 	end
 	info.FarZ = startZ
-
-	buildMountains(backZ, info.FarZ)
-
-	-- Invisible boundary walls
-	local length = info.FarZ - backZ
-	for _, side in { -1, 1 } do
-		part({
-			Name = "Boundary",
-			Size = Vector3.new(2, 160, length),
-			Position = Vector3.new(side * (W + 1), 80, (info.FarZ + backZ) / 2),
-			Transparency = 1,
-		}, mapFolder)
-	end
-	part({
-		Name = "Boundary",
-		Size = Vector3.new(W * 2, 160, 2),
-		Position = Vector3.new(0, 80, backZ - 1),
-		Transparency = 1,
-	}, mapFolder)
-	part({
-		Name = "Boundary",
-		Size = Vector3.new(W * 2, 160, 2),
-		Position = Vector3.new(0, 80, info.FarZ + 1),
-		Transparency = 1,
-	}, mapFolder)
+	checkerWallX(info.FarZ, -L - 4, L + 4, Config.Zones[#Config.Zones].Wall, mapFolder, -1)
 
 	-- Spawn hub
 	local spawn = Instance.new("SpawnLocation")
@@ -2251,17 +2365,14 @@ function MapBuilder.Build()
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(14, 0.6, 14)
 	spawn.Position = Vector3.new(0, 0.3, 30)
-	spawn.Material = Enum.Material.Neon
-	spawn.Color = Color3.fromRGB(80, 200, 255)
+	spawn.Material = Enum.Material.SmoothPlastic
+	spawn.Color = Color3.fromRGB(90, 200, 255)
 	spawn.Neutral = true
 	spawn.Duration = 0
 	spawn.TopSurface = Enum.SurfaceType.Smooth
-	spawn.Transparency = 0.3
 	spawn.Parent = mapFolder
 	info.Spawn = spawn
 
-	-- Training dummies next to the spawn, facing the player spawn area
-	info.Dummies = {}
 	for _, x in { -26, 26 } do
 		table.insert(info.Dummies, buildDummy(Vector3.new(x, 0, 30), mapFolder))
 	end
@@ -2269,21 +2380,21 @@ function MapBuilder.Build()
 	local titleAnchor = deco({
 		Name = "Title",
 		Size = Vector3.new(1, 1, 1),
-		Position = Vector3.new(0, 26, 44),
+		Position = Vector3.new(0, WALL_HEIGHT + 12, corridorStart),
 		Transparency = 1,
 		CanCollide = false,
 	}, mapFolder)
 	billboard(
 		titleAnchor,
 		"☄️ STEAL A METEOR ☄️",
-		UDim2.new(50, 0, 9, 0),
+		UDim2.fromOffset(560, 100),
 		Vector3.new(0, 0, 0),
 		Color3.fromRGB(255, 225, 110),
-		320,
+		400,
 		Color3.fromRGB(120, 40, 0)
 	)
 
-	-- Plots
+	-- Gardens
 	for index = 1, Config.PlotCount do
 		info.Plots[index] = buildPlot(index, plotsFolder)
 	end
@@ -2296,11 +2407,11 @@ return MapBuilder
 					</Properties>
 				</Item>
 			</Item>
-			<Item class="Folder" referent="RBXBE2A79BBF7424AA18AF4FF725AFE6008">
+			<Item class="Folder" referent="RBXE11703CA67284939BB3E3CAA32E16E81">
 				<Properties>
 					<string name="Name">Services</string>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX10A88F623EC74806BF5EB798FA06FB7A">
+				<Item class="ModuleScript" referent="RBX066823529D5146AC8A6F2AFBC2A0C3DD">
 					<Properties>
 						<string name="Name">CombatService</string>
 						<ProtectedString name="Source"><![CDATA[-- CombatService: the Hammer. Bonk a player to knock them back and make them drop
@@ -2477,6 +2588,11 @@ function CombatService.Swing(player, tool, big)
 		end
 	end
 
+	-- Guardians get stunned
+	if Services.Guardian.TryBonk(root, facing, range) then
+		hitSomeone = true
+	end
+
 	-- Training dummies
 	for _, dummy in Services.Map.Dummies or {} do
 		local offset = dummy.Torso.Position - root.Position
@@ -2499,7 +2615,7 @@ return CombatService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX7421045E408741ABB882769C70D1EF20">
+				<Item class="ModuleScript" referent="RBXE18108470EF049BC883F8005BCA4FDA7">
 					<Properties>
 						<string name="Name">DataService</string>
 						<ProtectedString name="Source"><![CDATA[-- DataService: loads/saves player data with DataStoreService and pushes a state
@@ -2767,7 +2883,7 @@ return DataService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBXAF159EB0A684462D8AB83F0E34F9B564">
+				<Item class="ModuleScript" referent="RBXFACD9A6B5D3743969911DAC7DFE2EA58">
 					<Properties>
 						<string name="Name">EventService</string>
 						<ProtectedString name="Source"><![CDATA[-- EventService: server-wide moments that make the whole lobby scream.
@@ -2896,7 +3012,253 @@ return EventService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBXC9EA9219828A4A55AAD08961B53C13D5">
+				<Item class="ModuleScript" referent="RBXE7422534B77E40D5B42EBA832967D215">
+					<Properties>
+						<string name="Name">GuardianService</string>
+						<ProtectedString name="Source"><![CDATA[-- GuardianService: every zone has a Guardian. Grab a meteor in its zone and it chases you.
+-- Further zones have faster Guardians, so you need speed (and carrying slows you down).
+-- Catch = you drop the meteor and get knocked back. Run far enough toward your base to escape.
+-- Bonk a Guardian with the Hammer to stun it for a moment.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Remotes = require(Shared.Remotes)
+local Visuals = require(Shared.Visuals)
+
+local GuardianService = {}
+local Services
+
+local guardians = {}
+local rng = Random.new()
+
+local function zoneAt(z)
+	for index, zone in Config.Zones do
+		if z >= zone.ZMin - 12 and z <= zone.ZMax + 12 then
+			return index
+		end
+	end
+	return nil
+end
+GuardianService.ZoneAt = zoneAt
+
+function GuardianService.Init(services)
+	Services = services
+end
+
+local function setAlert(g, on)
+	if g.AlertGui then
+		g.AlertGui.Enabled = on
+	end
+end
+
+local function stopChase(g, reason)
+	local target = g.Target
+	g.State = "Return"
+	g.Target = nil
+	setAlert(g, false)
+	if target and target.Parent then
+		Remotes.Effect:FireClient(target, "Chase", false, g.Zone.Guardian.Name)
+		if reason == "escaped" then
+			Services.Notify(target, "You escaped the " .. g.Zone.Guardian.Name .. "!", Color3.fromRGB(120, 255, 160))
+		end
+	end
+end
+
+local function catch(g, player, root)
+	Services.Meteor.Drop(player, "guardian")
+	Services.Notify(
+		player,
+		"😠 The " .. g.Zone.Guardian.Name .. " caught you! Get more Speed!",
+		Color3.fromRGB(255, 110, 90)
+	)
+	local away = root.Position - g.Position
+	away = Vector3.new(away.X, 0, away.Z)
+	if away.Magnitude < 0.1 then
+		away = Vector3.new(0, 0, -1)
+	end
+	Remotes.Knockback:FireClient(player, away.Unit * 70 + Vector3.new(0, 40, 0), 1)
+	Remotes.Effect:FireAllClients("Bonk", root.Position)
+	stopChase(g, "caught")
+end
+
+-- Called when a player grabs a meteor lying at `position`
+function GuardianService.Alert(player, position)
+	local index = zoneAt(position.Z)
+	local g = index and guardians[index]
+	if not g then
+		return
+	end
+	if g.State == "Chase" or g.State == "Alert" then
+		return -- busy with another thief
+	end
+	local now = os.clock()
+	g.State = "Alert"
+	g.Target = player
+	g.ReactAt = now + Config.Guardian.ReactTime
+	g.GiveUpAt = now + Config.Guardian.ReactTime + Config.Guardian.MaxChaseTime
+	setAlert(g, true)
+	Remotes.Effect:FireClient(player, "Chase", true, g.Zone.Guardian.Name)
+end
+
+-- Hammer hit check. Returns true if a Guardian got bonked.
+function GuardianService.TryBonk(attackerRoot, facing, range)
+	local hit = false
+	for _, g in guardians do
+		local offset = g.Position - attackerRoot.Position
+		local flat = Vector3.new(offset.X, 0, offset.Z)
+		local reach = range + g.Radius
+		if flat.Magnitude <= reach and (flat.Magnitude < g.Radius + 2 or flat.Unit:Dot(facing) > 0.1) then
+			g.StunUntil = os.clock() + Config.Guardian.StunTime
+			Remotes.Effect:FireAllClients("Bonk", g.Position + Vector3.new(0, g.Height, 0))
+			hit = true
+		end
+	end
+	return hit
+end
+
+local function place(g, now, dt)
+	local hop
+	if g.State == "Chase" then
+		hop = math.abs(math.sin(now * 12)) * 1.4
+	else
+		hop = math.abs(math.sin(now * 4 + g.Index)) * 0.35
+	end
+	local position = g.Position + Vector3.new(0, g.Height + hop, 0)
+	local cf = CFrame.lookAt(position, position + g.Facing)
+	if now < g.StunUntil then
+		g.Spin += dt * 12
+		cf = CFrame.new(position) * CFrame.Angles(0, g.Spin, 0)
+	end
+	g.Root.CFrame = cf
+end
+
+local function update(dt)
+	local now = os.clock()
+	local lane = Config.LaneHalfWidth
+	for _, g in guardians do
+		local zone = g.Zone
+		local speed = zone.Guardian.Speed
+		local goal = nil
+		local moveSpeed = speed
+
+		if now < g.StunUntil then
+			place(g, now, dt)
+			continue
+		end
+
+		if g.State == "Alert" then
+			local root = g.Target and Services.Player.GetAliveParts(g.Target)
+			if root then
+				local look = Vector3.new(root.Position.X - g.Position.X, 0, root.Position.Z - g.Position.Z)
+				if look.Magnitude > 0.1 then
+					g.Facing = look.Unit
+				end
+			end
+			if now >= g.ReactAt then
+				g.State = "Chase"
+			end
+		elseif g.State == "Chase" then
+			local target = g.Target
+			local root = target and target.Parent and Services.Player.GetAliveParts(target)
+			local carry = target and Services.Meteor.GetCarry(target)
+			if not root or not carry or carry.StolenFrom then
+				stopChase(g, "lost")
+			elseif now > g.GiveUpAt then
+				stopChase(g, "escaped")
+			elseif root.Position.Z < zone.ZMin - Config.Guardian.EscapeDistance then
+				stopChase(g, "escaped")
+			else
+				goal = root.Position
+				local flat = Vector3.new(goal.X - g.Position.X, 0, goal.Z - g.Position.Z)
+				if flat.Magnitude <= Config.Guardian.CatchDistance + g.Radius * 0.5 then
+					catch(g, target, root)
+					goal = nil
+				end
+			end
+		elseif g.State == "Return" then
+			goal = g.Home
+			moveSpeed = math.max(10, speed * 0.6)
+			if (Vector3.new(g.Position.X, 0, g.Position.Z) - g.Home).Magnitude < 2 then
+				g.State = "Idle"
+			end
+		else
+			-- Idle: wander around its zone
+			if not g.WanderTo or (Vector3.new(g.Position.X, 0, g.Position.Z) - g.WanderTo).Magnitude < 2 then
+				g.WanderTo = Vector3.new(rng:NextNumber(-lane + 10, lane - 10), 0, rng:NextNumber(zone.ZMin + 15, zone.ZMax - 15))
+			end
+			goal = g.WanderTo
+			moveSpeed = math.min(8, speed * 0.4)
+		end
+
+		if goal then
+			local delta = Vector3.new(goal.X - g.Position.X, 0, goal.Z - g.Position.Z)
+			local distance = delta.Magnitude
+			if distance > 0.1 then
+				local step = math.min(distance, moveSpeed * dt)
+				g.Position += delta.Unit * step
+				g.Facing = delta.Unit
+			end
+		end
+		g.Position = Vector3.new(
+			math.clamp(g.Position.X, -lane + 5, lane - 5),
+			0,
+			math.clamp(g.Position.Z, zone.ZMin - Config.Guardian.EscapeDistance - 10, zone.ZMax + 15)
+		)
+		place(g, now, dt)
+	end
+end
+
+function GuardianService.Start()
+	local folder = Instance.new("Folder")
+	folder.Name = "Guardians"
+	folder.Parent = workspace
+
+	for index, zone in Config.Zones do
+		local model = Visuals.GuardianModel(zone)
+		local root = model.PrimaryPart
+		local home = Vector3.new(0, 0, (zone.ZMin + zone.ZMax) / 2)
+		local height = root.Size.Y / 2 + 1.2
+		model:PivotTo(CFrame.lookAt(home + Vector3.new(0, height, 0), home + Vector3.new(0, height, -1)))
+		model.Parent = folder
+		local alertGui = root:FindFirstChild("AlertGui")
+		guardians[index] = {
+			Index = index,
+			Zone = zone,
+			Model = model,
+			Root = root,
+			Home = home,
+			Position = home,
+			Height = height,
+			Radius = root.Size.X / 2,
+			Facing = Vector3.new(0, 0, -1),
+			State = "Idle",
+			Target = nil,
+			StunUntil = 0,
+			Spin = 0,
+			AlertGui = alertGui,
+		}
+	end
+
+	RunService.Heartbeat:Connect(update)
+
+	Players.PlayerRemoving:Connect(function(player)
+		for _, g in guardians do
+			if g.Target == player then
+				stopChase(g, "left")
+			end
+		end
+	end)
+end
+
+return GuardianService
+]]></ProtectedString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX62B58D606CA1490F8D1732D2E2764179">
 					<Properties>
 						<string name="Name">MeteorService</string>
 						<ProtectedString name="Source"><![CDATA[-- MeteorService: meteors falling from the sky, grabbing, carrying them over your head,
@@ -3040,6 +3402,7 @@ function MeteorService.TryGrab(player, model)
 		return
 	end
 
+	local grabPosition = model.PrimaryPart.Position
 	removeGround(entry)
 	if entry.Announce then
 		Services.NotifyAll(
@@ -3047,7 +3410,10 @@ function MeteorService.TryGrab(player, model)
 			Color3.fromRGB(255, 215, 60)
 		)
 	end
-	if not MeteorService.Carry(player, entry.Item, nil, model) then
+	if MeteorService.Carry(player, entry.Item, nil, model) then
+		-- The zone Guardian wakes up and chases the thief
+		Services.Guardian.Alert(player, grabPosition)
+	else
 		MeteorService.MakeGround(model, entry.Item, { Lifetime = Config.Meteor.DropLifetime })
 	end
 end
@@ -3095,9 +3461,9 @@ function MeteorService.SpawnMeteor(zoneIndex, opts)
 		item.mut = Services.Plot.RollMutation(Config.Events.ShowerMutationMult * 2)
 	end
 
-	local w = Config.MapHalfWidth
-	-- Zone floors are flat at y = 0
-	local target = Vector3.new(math.random(-w + 15, w - 15), 0, math.random(zone.ZMin + 8, zone.ZMax - 8))
+	-- Inside the corridor; floors are flat at y = 0
+	local w = Config.LaneHalfWidth
+	local target = Vector3.new(math.random(-w + 8, w - 8), 0, math.random(zone.ZMin + 8, zone.ZMax - 8))
 
 	local countedZone = nil
 	if not opts.Special then
@@ -3462,7 +3828,7 @@ return MeteorService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX25977E9F10A24F16BAE25A1518718F09">
+				<Item class="ModuleScript" referent="RBX3D2B51F0B85F4D05B669E2DF37FA6C2E">
 					<Properties>
 						<string name="Name">PlayerService</string>
 						<ProtectedString name="Source"><![CDATA[-- PlayerService: characters, walk speed, game pass ownership and all player multipliers.
@@ -3841,7 +4207,7 @@ return PlayerService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBX069A1A4311DD413B9A6E7D80960C2FE0">
+				<Item class="ModuleScript" referent="RBX35474566292B4815AB94F3D31C8F6E5A">
 					<Properties>
 						<string name="Name">PlotService</string>
 						<ProtectedString name="Source"><![CDATA[-- PlotService: player bases. Pedestals, hatching, income, the Speed/Collect/Lock pads
@@ -3909,7 +4275,7 @@ function PlotService.Assign(player)
 			plot.Owner = player
 			plotOf[player] = plot
 			plot.Model:SetAttribute("Owner", player.UserId)
-			plot.SignLabel.Text = player.DisplayName .. "'s Base"
+			plot.SignLabel.Text = player.DisplayName .. "'s Garden"
 			plot.LockedUntil = 0
 			plot.LockCooldownUntil = 0
 			PlotService.RefreshPedestals(player)
@@ -3942,7 +4308,7 @@ function PlotService.Release(player)
 	end
 	plot.Owner = nil
 	plot.Model:SetAttribute("Owner", 0)
-	plot.SignLabel.Text = "Empty Base"
+	plot.SignLabel.Text = "Empty Garden"
 	plot.BankLabel.Text = "💰 $0\nstep to collect"
 	plot.LockedUntil = 0
 	plot.Laser.Transparency = 1
@@ -4419,7 +4785,7 @@ return PlotService
 ]]></ProtectedString>
 					</Properties>
 				</Item>
-				<Item class="ModuleScript" referent="RBXD0AA9CAEBCC64F6D8751BD94E4D3C265">
+				<Item class="ModuleScript" referent="RBX77BFAA53F53B4CE6B99FE859DEEE18DF">
 					<Properties>
 						<string name="Name">ShopService</string>
 						<ProtectedString name="Source"><![CDATA[-- ShopService: in-game cash purchases (boots, pedestals, rebirth) and Robux purchases.
@@ -4595,23 +4961,23 @@ return ShopService
 			</Item>
 		</Item>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX1D776A53059241EA880B3AE86BB5088E">
+	<Item class="StarterPlayer" referent="RBX42C936522C724D7DA9F60EFA38F7923B">
 		<Properties>
 			<string name="Name">StarterPlayer</string>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBXAEECBB91CAC8464EA2B13F8413DD68A9">
+		<Item class="StarterPlayerScripts" referent="RBX9138C2F8EDA34E91AE0DF0C8F7F84069">
 			<Properties>
 				<string name="Name">StarterPlayerScripts</string>
 			</Properties>
-			<Item class="Folder" referent="RBX36F7C8ACDC3F434E80F1CA3676534736">
+			<Item class="Folder" referent="RBX18FF62CAA5D94DAD8DC07ED8B4370916">
 				<Properties>
 					<string name="Name">Client</string>
 				</Properties>
-				<Item class="Folder" referent="RBXFADAE0E94C5D4586A8F0E02CA208AFB8">
+				<Item class="Folder" referent="RBX96CDD65899524AED88A20358D88F3F5C">
 					<Properties>
 						<string name="Name">Controllers</string>
 					</Properties>
-					<Item class="ModuleScript" referent="RBX83D939D2861246F1A74F050E49CF5B8E">
+					<Item class="ModuleScript" referent="RBX96817B2426CD4F4D9AC47890AE29E05F">
 						<Properties>
 							<string name="Name">Effects</string>
 							<ProtectedString name="Source"><![CDATA[-- Effects: knockback, camera shake, impact shockwaves with debris, hatch bursts, sounds.
@@ -4895,6 +5261,14 @@ function HANDLERS.Discovered(id, rarityName)
 	end
 end
 
+function HANDLERS.Chase(on, guardianName)
+	UI.SetChase(on, guardianName)
+	if on then
+		play("Alarm", 0.45)
+		shake(1.5, 0.3)
+	end
+end
+
 function HANDLERS.Alarm()
 	UI.Flash(Color3.fromRGB(255, 40, 40))
 	play("Alarm", 0.5)
@@ -4960,7 +5334,7 @@ return Effects
 ]]></ProtectedString>
 						</Properties>
 					</Item>
-					<Item class="ModuleScript" referent="RBX970763B8CB214C0BBAA0D3CE5F20EB1F">
+					<Item class="ModuleScript" referent="RBX99C7E2F40BD7461C91B9AA9192E0F4BC">
 						<Properties>
 							<string name="Name">UI</string>
 							<ProtectedString name="Source"><![CDATA[-- UI: the whole HUD built in code.
@@ -6129,6 +6503,40 @@ local function buildOverlay()
 	})
 	refs.CoinPop = create("UIScale", { Parent = refs.Coin })
 
+	-- Guardian chase: red pulsing screen border + warning text
+	-- UIStroke is drawn outside the frame, so inset the frame by the stroke thickness
+	refs.Chase = create("Frame", {
+		Name = "Chase",
+		Position = UDim2.fromOffset(22, 22),
+		Size = UDim2.new(1, -44, 1, -44),
+		BackgroundTransparency = 1,
+		Visible = false,
+		Parent = gui,
+	})
+	local chaseStroke = create("UIStroke", {
+		Color = Color3.fromRGB(255, 30, 30),
+		Thickness = 22,
+		Transparency = 0.3,
+		Parent = refs.Chase,
+	})
+	TweenService:Create(chaseStroke, TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		Transparency = 0.8,
+	}):Play()
+	refs.ChaseLabel = scaled(label({
+		Name = "ChaseText",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -160),
+		Size = UDim2.fromOffset(640, 56),
+		Text = "",
+		TextColor3 = Color3.fromRGB(255, 90, 80),
+		Visible = false,
+		Parent = gui,
+	}, 4))
+	local chasePulse = create("UIScale", { Parent = refs.ChaseLabel })
+	TweenService:Create(chasePulse, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		Scale = 1.08,
+	}):Play()
+
 	refs.Flash = create("Frame", {
 		Name = "Flash",
 		Size = UDim2.fromScale(1, 1),
@@ -6356,6 +6764,14 @@ function UI.MarkNew(id)
 		return true
 	end
 	return false
+end
+
+function UI.SetChase(on, guardianName)
+	refs.Chase.Visible = on
+	refs.ChaseLabel.Visible = on
+	if on then
+		refs.ChaseLabel.Text = "😠 " .. string.upper(guardianName or "Guardian") .. " IS CHASING YOU! RUN HOME!"
+	end
 end
 
 function UI.Flash(color)
@@ -6631,7 +7047,7 @@ return UI
 ]]></ProtectedString>
 						</Properties>
 					</Item>
-					<Item class="ModuleScript" referent="RBXCC3085DCB0C74311AFB4B69EFB27C8B8">
+					<Item class="ModuleScript" referent="RBX44EA3222B9674A57AE05C4F5AA0FE91E">
 						<Properties>
 							<string name="Name">World</string>
 							<ProtectedString name="Source"><![CDATA[-- World: client-side life for the 3D world.
@@ -6898,7 +7314,7 @@ return World
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="LocalScript" referent="RBX05D758093BDC464B85EAD18B3D6A17E9">
+				<Item class="LocalScript" referent="RBXAF1CE771B0BA4C2BBF45F51567273941">
 					<Properties>
 						<string name="Name">Main</string>
 						<ProtectedString name="Source"><![CDATA[-- Steal a Meteor: client entry point.
@@ -6936,19 +7352,19 @@ end)
 			</Item>
 		</Item>
 	</Item>
-	<Item class="Workspace" referent="RBXB5D1668374314455AD17C496B54F4FE3">
+	<Item class="Workspace" referent="RBXD27CBFA19EC1483C9D8A8A5D3AB81B18">
 		<Properties>
 			<string name="Name">Workspace</string>
 			<bool name="FilteringEnabled">true</bool>
 		</Properties>
 	</Item>
-	<Item class="SoundService" referent="RBX3D70500048A84967B4C81EF6BE50E36D">
+	<Item class="SoundService" referent="RBX5F97B2E451A74B2F942BBA5DD1A3C67E">
 		<Properties>
 			<string name="Name">SoundService</string>
 			<bool name="RespectFilteringEnabled">true</bool>
 		</Properties>
 	</Item>
-	<Item class="Lighting" referent="RBX906D89EDD9044ED6860D65E99379CB2C">
+	<Item class="Lighting" referent="RBXF5D8D5382EB743FEBDB39080CA56E599">
 		<Properties>
 			<string name="Name">Lighting</string>
 			<token name="Technology">4</token>

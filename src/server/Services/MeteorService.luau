@@ -139,6 +139,7 @@ function MeteorService.TryGrab(player, model)
 		return
 	end
 
+	local grabPosition = model.PrimaryPart.Position
 	removeGround(entry)
 	if entry.Announce then
 		Services.NotifyAll(
@@ -146,7 +147,10 @@ function MeteorService.TryGrab(player, model)
 			Color3.fromRGB(255, 215, 60)
 		)
 	end
-	if not MeteorService.Carry(player, entry.Item, nil, model) then
+	if MeteorService.Carry(player, entry.Item, nil, model) then
+		-- The zone Guardian wakes up and chases the thief
+		Services.Guardian.Alert(player, grabPosition)
+	else
 		MeteorService.MakeGround(model, entry.Item, { Lifetime = Config.Meteor.DropLifetime })
 	end
 end
@@ -194,9 +198,9 @@ function MeteorService.SpawnMeteor(zoneIndex, opts)
 		item.mut = Services.Plot.RollMutation(Config.Events.ShowerMutationMult * 2)
 	end
 
-	local w = Config.MapHalfWidth
-	-- Zone floors are flat at y = 0
-	local target = Vector3.new(math.random(-w + 15, w - 15), 0, math.random(zone.ZMin + 8, zone.ZMax - 8))
+	-- Inside the corridor; floors are flat at y = 0
+	local w = Config.LaneHalfWidth
+	local target = Vector3.new(math.random(-w + 8, w - 8), 0, math.random(zone.ZMin + 8, zone.ZMax - 8))
 
 	local countedZone = nil
 	if not opts.Special then

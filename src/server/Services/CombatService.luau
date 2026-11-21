@@ -172,6 +172,11 @@ function CombatService.Swing(player, tool, big)
 		end
 	end
 
+	-- Guardians get stunned
+	if Services.Guardian.TryBonk(root, facing, range) then
+		hitSomeone = true
+	end
+
 	-- Training dummies
 	for _, dummy in Services.Map.Dummies or {} do
 		local offset = dummy.Torso.Position - root.Position

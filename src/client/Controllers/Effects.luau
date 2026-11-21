@@ -279,6 +279,14 @@ function HANDLERS.Discovered(id, rarityName)
 	end
 end
 
+function HANDLERS.Chase(on, guardianName)
+	UI.SetChase(on, guardianName)
+	if on then
+		play("Alarm", 0.45)
+		shake(1.5, 0.3)
+	end
+end
+
 function HANDLERS.Alarm()
 	UI.Flash(Color3.fromRGB(255, 40, 40))
 	play("Alarm", 0.5)

@@ -144,51 +144,70 @@ Config.PlotSpacing = 70
 Config.PlotCenterZ = -40
 
 -- Zones in front of the bases. Further zone = rarer meteors, higher speed needed.
+-- The meteor corridor: a long lane with tall checkered walls
+Config.LaneHalfWidth = 45
+
+-- Zones along the corridor. Further zone = rarer meteors, higher speed needed, faster Guardian.
+-- Floor/Wall are the two checker colors. GuardianSpeed: how fast its Guardian chases you
+-- (you must be faster, and carrying slows you down!).
 Config.Zones = {
 	{
 		Name = "Meadow",
 		ZMin = 70,
 		ZMax = 220,
 		Speed = 0,
-		Color = Color3.fromRGB(95, 170, 80),
-		Material = Enum.Material.Grass,
+		Floor = { Color3.fromRGB(125, 220, 75), Color3.fromRGB(105, 200, 62) },
+		Wall = { Color3.fromRGB(215, 140, 80), Color3.fromRGB(190, 118, 62) },
 		Interval = 4,
 		MaxActive = 12,
 		Weights = { Common = 70, Uncommon = 25, Rare = 5 },
+		Guardian = { Name = "Grumpy Rock", Speed = 13, Color = Color3.fromRGB(140, 130, 120) },
 	},
 	{
 		Name = "Crater Dunes",
 		ZMin = 240,
 		ZMax = 400,
 		Speed = 40,
-		Color = Color3.fromRGB(225, 190, 120),
-		Material = Enum.Material.Sand,
+		Floor = { Color3.fromRGB(245, 222, 160), Color3.fromRGB(230, 204, 138) },
+		Wall = { Color3.fromRGB(235, 195, 115), Color3.fromRGB(212, 172, 96) },
 		Interval = 6,
 		MaxActive = 8,
 		Weights = { Uncommon = 40, Rare = 40, Epic = 18, Legendary = 2 },
+		Guardian = { Name = "Dune Crab", Speed = 36, Color = Color3.fromRGB(240, 120, 60) },
 	},
 	{
 		Name = "Lava Rift",
 		ZMin = 420,
 		ZMax = 590,
 		Speed = 90,
-		Color = Color3.fromRGB(60, 45, 45),
-		Material = Enum.Material.Basalt,
+		Floor = { Color3.fromRGB(95, 62, 60), Color3.fromRGB(80, 50, 50) },
+		Wall = { Color3.fromRGB(150, 60, 45), Color3.fromRGB(122, 46, 35) },
 		Interval = 9,
 		MaxActive = 6,
 		Weights = { Epic = 45, Legendary = 40, Mythic = 13, Cosmic = 2 },
+		Guardian = { Name = "Magma Golem", Speed = 80, Color = Color3.fromRGB(255, 100, 30) },
 	},
 	{
 		Name = "Cosmic Void",
 		ZMin = 610,
 		ZMax = 800,
 		Speed = 160,
-		Color = Color3.fromRGB(35, 20, 70),
-		Material = Enum.Material.Glass,
+		Floor = { Color3.fromRGB(88, 64, 160), Color3.fromRGB(72, 50, 138) },
+		Wall = { Color3.fromRGB(120, 85, 200), Color3.fromRGB(98, 68, 175) },
 		Interval = 13,
 		MaxActive = 4,
 		Weights = { Legendary = 35, Mythic = 45, Cosmic = 18, Secret = 2 },
+		Guardian = { Name = "Void Watcher", Speed = 140, Color = Color3.fromRGB(180, 80, 255) },
 	},
+}
+
+-- Guardians: chase whoever grabs a meteor in their zone
+Config.Guardian = {
+	ReactTime = 0.9, -- seconds of "!" before the chase starts
+	CatchDistance = 5,
+	MaxChaseTime = 25,
+	EscapeDistance = 50, -- run this far past the start of the zone toward your base to escape
+	StunTime = 2.5, -- hammer bonk stuns a Guardian
 }
 
 -- Meteor behaviour

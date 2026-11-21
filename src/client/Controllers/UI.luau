@@ -1164,6 +1164,40 @@ local function buildOverlay()
 	})
 	refs.CoinPop = create("UIScale", { Parent = refs.Coin })
 
+	-- Guardian chase: red pulsing screen border + warning text
+	-- UIStroke is drawn outside the frame, so inset the frame by the stroke thickness
+	refs.Chase = create("Frame", {
+		Name = "Chase",
+		Position = UDim2.fromOffset(22, 22),
+		Size = UDim2.new(1, -44, 1, -44),
+		BackgroundTransparency = 1,
+		Visible = false,
+		Parent = gui,
+	})
+	local chaseStroke = create("UIStroke", {
+		Color = Color3.fromRGB(255, 30, 30),
+		Thickness = 22,
+		Transparency = 0.3,
+		Parent = refs.Chase,
+	})
+	TweenService:Create(chaseStroke, TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		Transparency = 0.8,
+	}):Play()
+	refs.ChaseLabel = scaled(label({
+		Name = "ChaseText",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -160),
+		Size = UDim2.fromOffset(640, 56),
+		Text = "",
+		TextColor3 = Color3.fromRGB(255, 90, 80),
+		Visible = false,
+		Parent = gui,
+	}, 4))
+	local chasePulse = create("UIScale", { Parent = refs.ChaseLabel })
+	TweenService:Create(chasePulse, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		Scale = 1.08,
+	}):Play()
+
 	refs.Flash = create("Frame", {
 		Name = "Flash",
 		Size = UDim2.fromScale(1, 1),
@@ -1391,6 +1425,14 @@ function UI.MarkNew(id)
 		return true
 	end
 	return false
+end
+
+function UI.SetChase(on, guardianName)
+	refs.Chase.Visible = on
+	refs.ChaseLabel.Visible = on
+	if on then
+		refs.ChaseLabel.Text = "😠 " .. string.upper(guardianName or "Guardian") .. " IS CHASING YOU! RUN HOME!"
+	end
 end
 
 function UI.Flash(color)
